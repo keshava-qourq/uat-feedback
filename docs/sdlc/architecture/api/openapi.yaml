@@ -2,6 +2,1585 @@
 openapi: 3.1.0
 info:
   title: UAT-Feedback
-  version: architecture-v0
+  version: architecture-v1
   description: Designed API from the approved architecture (not extracted from code).
-paths: {}
+paths:
+  /api/admin/extraction-report:
+    get:
+      summary: Notes processed, findings per clue type and the stated caveat that
+        templated note text makes extraction easier than real
+      description: Notes processed, findings per clue type and the stated caveat that
+        templated note text makes extraction easier than real clinical text.
+      operationId: get_api_admin_extraction_report
+      parameters: []
+      responses:
+        '200':
+          description: '{notes_processed, findings_by_clue, caveat}'
+      security:
+      - bearerAuth: []
+  /api/admin/ingest-runs:
+    post:
+      summary: Starts one ingest run over the configured dataset location, replacing
+        any prior load of that dataset version.
+      description: Starts one ingest run over the configured dataset location, replacing
+        any prior load of that dataset version.
+      operationId: post_api_admin_ingest_runs
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{dataset_version, source_uri, seed}'
+      responses:
+        '200':
+          description: '{run_id, job_id}'
+      security:
+      - bearerAuth: []
+  /api/admin/ingest-runs/{run_id}:
+    get:
+      summary: 'Ingest report: dataset version, seed, total patient count, per-file
+        rows loaded and rejected with a pass or fail line, n'
+      description: 'Ingest report: dataset version, seed, total patient count, per-file
+        rows loaded and rejected with a pass or fail line, named failures with file
+        and column, provenance failures and the de-duplication report.'
+      operationId: get_api_admin_ingest_runs_run_id
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '{run, files[], dedup_report, provenance_failures}'
+      security:
+      - bearerAuth: []
+  /api/admin/jobs:
+    post:
+      summary: 'Queues a background job: dedup_check, extraction, training or warm_personas.'
+      description: 'Queues a background job: dedup_check, extraction, training or
+        warm_personas.'
+      operationId: post_api_admin_jobs
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{kind, params}'
+      responses:
+        '200':
+          description: '{job_id}'
+      security:
+      - bearerAuth: []
+  /api/admin/jobs/{job_id}:
+    get:
+      summary: Job status, progress percentage and message so no screen blocks while
+        minutes-long work runs.
+      description: Job status, progress percentage and message so no screen blocks
+        while minutes-long work runs.
+      operationId: get_api_admin_jobs_job_id
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '{kind, status, progress_pct, progress_message, result}'
+      security:
+      - bearerAuth: []
+  /api/admin/pack:
+    get:
+      summary: Returns the active condition pack as configuration with awaiting-clinical-review
+        markers, or reports that no pack is act
+      description: Returns the active condition pack as configuration with awaiting-clinical-review
+        markers, or reports that no pack is active.
+      operationId: get_api_admin_pack
+      parameters: []
+      responses:
+        '200':
+          description: '{pack_key, version, enabled, config, awaiting_review}'
+      security:
+      - bearerAuth: []
+    put:
+      summary: 'Saves an edited pack (code lists, thresholds, rules, workup, copy)
+        as a new version, recording who changed it and when. '
+      description: Saves an edited pack (code lists, thresholds, rules, workup, copy)
+        as a new version, recording who changed it and when. Applies at the next rescore
+        with no deployment.
+      operationId: put_api_admin_pack
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{config, change_summary}'
+      responses:
+        '200':
+          description: '{version, updated_by, updated_at}'
+      security:
+      - bearerAuth: []
+  /api/admin/settings:
+    get:
+      summary: Running environment, health check result, active dataset version, active
+        pack version and model run, and credential stat
+      description: Running environment, health check result, active dataset version,
+        active pack version and model run, and credential status shown as a masked
+        placeholder with connected or not configured.
+      operationId: get_api_admin_settings
+      parameters: []
+      responses:
+        '200':
+          description: '{environment, health, dataset_version, pack_version, model_run,
+            credentials:[{name, masked:''<not-shown>'', status}]}'
+      security:
+      - bearerAuth: []
+  /api/admin/users/{user_id}/deactivate:
+    post:
+      summary: Deactivates an account and revokes all its sessions so existing tokens
+        stop working and no new sign-in succeeds.
+      description: Deactivates an account and revokes all its sessions so existing
+        tokens stop working and no new sign-in succeeds.
+      operationId: post_api_admin_users_user_id_deactivate
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: none
+      responses:
+        '200':
+          description: '{user_id, is_active:false, sessions_revoked}'
+      security:
+      - bearerAuth: []
+  /api/auth/login:
+    post:
+      summary: Clinician or patient signs in with email and password. Refuses deactivated
+        accounts.
+      description: Clinician or patient signs in with email and password. Refuses
+        deactivated accounts.
+      operationId: post_api_auth_login
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{email, password}'
+      responses:
+        '200':
+          description: '{token, user:{id, role, must_set_password}}  // opaque session
+            token in the body'
+  /api/auth/logout:
+    post:
+      summary: Revokes the current session server-side so the token stops working
+        immediately.
+      description: Revokes the current session server-side so the token stops working
+        immediately.
+      operationId: post_api_auth_logout
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: none
+      responses:
+        '200':
+          description: '204'
+      security:
+      - bearerAuth: []
+  /api/auth/me:
+    get:
+      summary: Returns the current user, role and session idle expiry.
+      description: Returns the current user, role and session idle expiry.
+      operationId: get_api_auth_me
+      parameters: []
+      responses:
+        '200':
+          description: '{id, email, role, patient_id, idle_expires_at}'
+      security:
+      - bearerAuth: []
+  /api/auth/set-password:
+    post:
+      summary: Sets the password at first sign-in (<set-at-first-login>) or after
+        a reset link.
+      description: Sets the password at first sign-in (<set-at-first-login>) or after
+        a reset link.
+      operationId: post_api_auth_set_password
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{current_token_or_reset_token, new_password}'
+      responses:
+        '200':
+          description: '{token}'
+      security:
+      - bearerAuth: []
+  /api/cases/{patient_id}:
+    get:
+      summary: 'One-page case summary: status with rationale, top evidence, evidence
+        against, conflicting labels, criteria met/missing/u'
+      description: 'One-page case summary: status with rationale, top evidence, evidence
+        against, conflicting labels, criteria met/missing/unknown, counter-evidence
+        with named alternative, suggested workup, narrative or an unavailable notice,
+        and the Insufficient-history detail block when it applies.'
+      operationId: get_api_cases_patient_id
+      parameters:
+      - name: patient_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '{status, rationale, scored_without_model, evidence_for[],
+            evidence_against[], conflicting_labels[], criteria[], counter_evidence[],
+            workup[], narrative, what_we_still_need[]}'
+      security:
+      - bearerAuth: []
+  /api/cases/{patient_id}/decisions:
+    post:
+      summary: Records agree, disagree or need more info with a reason, the clinician
+        identity, timestamp and the tier shown at the tim
+      description: Records agree, disagree or need more info with a reason, the clinician
+        identity, timestamp and the tier shown at the time. Supersedes any prior decision,
+        keeping history.
+      operationId: post_api_cases_patient_id_decisions
+      parameters:
+      - name: patient_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{decision, reason}'
+      responses:
+        '200':
+          description: '{decision_id, created_at, supersedes}'
+      security:
+      - bearerAuth: []
+  /api/cases/{patient_id}/referral-packet.pdf:
+    get:
+      summary: Self-contained printable referral packet with status, evidence for
+        and against, conflicting labels, criteria, workup rea
+      description: Self-contained printable referral packet with status, evidence
+        for and against, conflicting labels, criteria, workup reasoning and the timeline
+        extract, each item dated and source-tagged, synthetic-data notice on every
+        page, nothing dated on or after the cutoff.
+      operationId: get_api_cases_patient_id_referral_packet_pdf
+      parameters:
+      - name: patient_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: application/pdf
+      security:
+      - bearerAuth: []
+  /api/cases/{patient_id}/rescore:
+    post:
+      summary: Recomputes the case against the active pack and model artefact, invalidating
+        the cache.
+      description: Recomputes the case against the active pack and model artefact,
+        invalidating the cache.
+      operationId: post_api_cases_patient_id_rescore
+      parameters:
+      - name: patient_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: none
+      responses:
+        '200':
+          description: '{case_score_id, status}'
+      security:
+      - bearerAuth: []
+  /api/cases/{patient_id}/timeline:
+    get:
+      summary: Full clinician timeline positioned at a given evidence item for the
+        one-click drill-through. Post-cutoff items are never
+      description: Full clinician timeline positioned at a given evidence item for
+        the one-click drill-through. Post-cutoff items are never returned.
+      operationId: get_api_cases_patient_id_timeline
+      parameters:
+      - name: patient_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '{items:[...], focus_index}'
+      security:
+      - bearerAuth: []
+  /api/cases/{patient_id}/workup-outcomes:
+    post:
+      summary: Records workup results with the date and recording clinician, lowers
+        the tier per pack rules, keeps the prior tier in hi
+      description: Records workup results with the date and recording clinician, lowers
+        the tier per pack rules, keeps the prior tier in history and prepares the
+        patient update.
+      operationId: post_api_cases_patient_id_workup_outcomes
+      parameters:
+      - name: patient_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{results:[{item_key, result, result_date}], note}'
+      responses:
+        '200':
+          description: '{outcome_id, prior_tier, resulting_tier}'
+      security:
+      - bearerAuth: []
+  /api/demo/personas:
+    get:
+      summary: Lists the six hero personas with name and one-line description.
+      description: Lists the six hero personas with name and one-line description.
+      operationId: get_api_demo_personas
+      parameters: []
+      responses:
+        '200':
+          description: '[{persona_key, name, one_line_description}]'
+      security:
+      - bearerAuth: []
+  /api/demo/personas/{persona_key}/open:
+    post:
+      summary: Loads the persona's timeline, intake answers and case as of that persona's
+        cutoff, served from cache when warm, with sta
+      description: Loads the persona's timeline, intake answers and case as of that
+        persona's cutoff, served from cache when warm, with stage timings for the
+        performance check.
+      operationId: post_api_demo_personas_persona_key_open
+      parameters:
+      - name: persona_key
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{view:''patient''|''clinician''}'
+      responses:
+        '200':
+          description: '{bundle, stage_timings_ms, synthetic_notice:true}'
+      security:
+      - bearerAuth: []
+  /api/demo/personas/{persona_key}/replay:
+    get:
+      summary: 'Odyssey replay tracks: the real journey versus the first point the
+        engine would have reached High or Moderate, the lead '
+      description: 'Odyssey replay tracks: the real journey versus the first point
+        the engine would have reached High or Moderate, the lead time, and the facts
+        nobody connected with their sources. For an Insufficient-history persona it
+        returns that point and what was missing instead.'
+      operationId: get_api_demo_personas_persona_key_replay
+      parameters:
+      - name: persona_key
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '{real_track[], engine_track[], lead_time_days, unconnected_facts[]}'
+      security:
+      - bearerAuth: []
+  /api/evaluation/runs:
+    post:
+      summary: Queues an evaluation run over a selected split using the active model
+        artefact and threshold.
+      description: Queues an evaluation run over a selected split using the active
+        model artefact and threshold.
+      operationId: post_api_evaluation_runs
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{split}'
+      responses:
+        '200':
+          description: '{job_id}'
+      security:
+      - bearerAuth: []
+  /api/evaluation/runs/latest:
+    get:
+      summary: 'Latest metrics with each value beside its PRD target and a pass or
+        fail marker, plus split, dataset version, threshold, '
+      description: Latest metrics with each value beside its PRD target and a pass
+        or fail marker, plus split, dataset version, threshold, run date, the synthetic-data
+        notice and the templated-notes caveat. Refused to any other role.
+      operationId: get_api_evaluation_runs_latest
+      parameters: []
+      responses:
+        '200':
+          description: '{metrics, targets, pass_fail, split, dataset_version, threshold,
+            run_date, caveats}'
+      security:
+      - bearerAuth: []
+  /api/invites:
+    post:
+      summary: Clinician issues a single-use tokenised invite for one patient and
+        optionally has it emailed via SendGrid.
+      description: Clinician issues a single-use tokenised invite for one patient
+        and optionally has it emailed via SendGrid.
+      operationId: post_api_invites
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{patient_id, expires_in_hours, send_email:boolean}'
+      responses:
+        '200':
+          description: '{invite_id, link, expires_at, status}'
+      security:
+      - bearerAuth: []
+  /api/invites/{token}:
+    get:
+      summary: Validates an invite link without revealing patient data. Marks it opened.
+      description: Validates an invite link without revealing patient data. Marks
+        it opened.
+      operationId: get_api_invites_token
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '{valid:boolean, reason_if_refused}'
+  /api/invites/{token}/accept:
+    post:
+      summary: Consumes the invite and returns a patient-role session token scoped
+        to exactly one patient.
+      description: Consumes the invite and returns a patient-role session token scoped
+        to exactly one patient.
+      operationId: post_api_invites_token_accept
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{new_password?}'
+      responses:
+        '200':
+          description: '{token, user:{role:''patient'', patient_id}}'
+  /api/patients/me/intake:
+    get:
+      summary: Returns the pack's intake questions, the next unanswered question and
+        progress position.
+      description: Returns the pack's intake questions, the next unanswered question
+        and progress position.
+      operationId: get_api_patients_me_intake
+      parameters: []
+      responses:
+        '200':
+          description: '{next_question:{key, text, why_we_ask, input_type}, answered_count,
+            total}'
+      security:
+      - bearerAuth: []
+  /api/patients/me/intake/answers:
+    post:
+      summary: Saves one answer and writes it as a patient-sourced event tagged You
+        told us.
+      description: Saves one answer and writes it as a patient-sourced event tagged
+        You told us.
+      operationId: post_api_patients_me_intake_answers
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{question_key, answer_value}'
+      responses:
+        '200':
+          description: '{saved:true, next_question, answered_count}'
+      security:
+      - bearerAuth: []
+  /api/patients/me/share-links:
+    get:
+      summary: Lists the patient's active share links so they can see one is active.
+      description: Lists the patient's active share links so they can see one is active.
+      operationId: get_api_patients_me_share_links
+      parameters: []
+      responses:
+        '200':
+          description: '[{share_id, created_at, expires_at, active}]'
+      security:
+      - bearerAuth: []
+    post:
+      summary: Creates an unguessable share link, returned with the data the SPA renders
+        as a QR code.
+      description: Creates an unguessable share link, returned with the data the SPA
+        renders as a QR code.
+      operationId: post_api_patients_me_share_links
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{expires_in_hours}'
+      responses:
+        '200':
+          description: '{share_id, url, expires_at}'
+      security:
+      - bearerAuth: []
+  /api/patients/me/share-links/{share_id}:
+    delete:
+      summary: Revokes a share link so it immediately stops granting access.
+      description: Revokes a share link so it immediately stops granting access.
+      operationId: delete_api_patients_me_share_links_share_id
+      parameters:
+      - name: share_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '204'
+      security:
+      - bearerAuth: []
+  /api/patients/me/timeline:
+    get:
+      summary: Patient's merged chronological story with source tags, coverage gaps
+        and the reachable-history banner. Contains no tier,
+      description: Patient's merged chronological story with source tags, coverage
+        gaps and the reachable-history banner. Contains no tier, score or condition
+        name.
+      operationId: get_api_patients_me_timeline
+      parameters: []
+      responses:
+        '200':
+          description: '{items:[{date, description, source_tag, provider_org, confirmed_by_record}],
+            gaps:[{start, end, reason}], reachable_history_banner}'
+      security:
+      - bearerAuth: []
+  /api/patients/me/updates:
+    get:
+      summary: 'Post-workup plain-language update naming the tests done and the clinician''s
+        suggested next step, with no tier, score or '
+      description: Post-workup plain-language update naming the tests done and the
+        clinician's suggested next step, with no tier, score or diagnosis.
+      operationId: get_api_patients_me_updates
+      parameters: []
+      responses:
+        '200':
+          description: '{updates:[{recorded_at, tests:[{name, result, date}], next_step_text}]}'
+      security:
+      - bearerAuth: []
+  /api/patients/me/visit-prep:
+    get:
+      summary: Plain-language visit-prep sheet with cited patterns and suggested questions,
+        screened by the patient-copy guardrail.
+      description: Plain-language visit-prep sheet with cited patterns and suggested
+        questions, screened by the patient-copy guardrail.
+      operationId: get_api_patients_me_visit_prep
+      parameters: []
+      responses:
+        '200':
+          description: '{summary_sentences:[{text, citation:{date, source_tag, record_id}}],
+            questions_to_ask, synthetic_notice}'
+      security:
+      - bearerAuth: []
+  /api/patients/me/visit-prep.pdf:
+    get:
+      summary: Self-contained printable visit-prep document with the synthetic-data
+        notice on every page.
+      description: Self-contained printable visit-prep document with the synthetic-data
+        notice on every page.
+      operationId: get_api_patients_me_visit_prep_pdf
+      parameters: []
+      responses:
+        '200':
+          description: application/pdf
+      security:
+      - bearerAuth: []
+  /api/shared/{token}:
+    get:
+      summary: Resolves a share token to its patient case for a signed-in clinician
+        and records the access against the case.
+      description: Resolves a share token to its patient case for a signed-in clinician
+        and records the access against the case.
+      operationId: get_api_shared_token
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '{patient_id, case_summary}'
+      security:
+      - bearerAuth: []
+  /api/worklist:
+    get:
+      summary: Assigned patients with status, one-line reason, reachable history span,
+        invite status and latest decision, ordered High,
+      description: Assigned patients with status, one-line reason, reachable history
+        span, invite status and latest decision, ordered High, Moderate, Insufficient
+        history, Low.
+      operationId: get_api_worklist
+      parameters: []
+      responses:
+        '200':
+          description: '[{patient_id, name, status, reason, reachable_history, invite_status,
+            latest_decision}]'
+      security:
+      - bearerAuth: []
+  /health:
+    get:
+      summary: Liveness and readiness including database, cache and queue reachability.
+      description: Liveness and readiness including database, cache and queue reachability.
+      operationId: get_health
+      parameters: []
+      responses:
+        '200':
+          description: '{status, db, cache, queue}'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    users:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        password_hash:
+          type: string
+        role:
+          type: string
+        patient_id:
+          type: string
+          format: uuid
+        is_active:
+          type: boolean
+        must_set_password:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        deactivated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - email
+      - role
+      - is_active
+      - must_set_password
+      - created_at
+    sessions:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        token_hash:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+        idle_expires_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - user_id
+      - token_hash
+      - created_at
+      - last_seen_at
+      - idle_expires_at
+    invites:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        token_hash:
+          type: string
+        patient_id:
+          type: string
+          format: uuid
+        issued_by_user_id:
+          type: string
+          format: uuid
+        granted_role:
+          type: string
+        status:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        opened_at:
+          type: string
+          format: date-time
+        consumed_at:
+          type: string
+          format: date-time
+        intake_completed_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - token_hash
+      - patient_id
+      - issued_by_user_id
+      - granted_role
+      - status
+      - expires_at
+    share_links:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        token_hash:
+          type: string
+        patient_id:
+          type: string
+          format: uuid
+        created_by_user_id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - token_hash
+      - patient_id
+      - created_by_user_id
+      - expires_at
+    audit_log:
+      type: object
+      properties:
+        id:
+          type: string
+        actor_user_id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        patient_id:
+          type: string
+          format: uuid
+        detail:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - action
+      - occurred_at
+    patients:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        dataset_patient_id:
+          type: string
+        dataset_version:
+          type: string
+        display_name:
+          type: string
+        birth_year:
+          type: integer
+        sex:
+          type: string
+        reachable_history_start:
+          type: string
+          format: date
+        assigned_clinician_id:
+          type: string
+          format: uuid
+      required:
+      - id
+      - dataset_patient_id
+      - dataset_version
+      - display_name
+    events:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        source_event_id:
+          type: string
+        event_time:
+          type: string
+          format: date-time
+        event_type:
+          type: string
+        code_system:
+          type: string
+        code:
+          type: string
+        display:
+          type: string
+        value:
+          type: string
+        unit:
+          type: string
+        provider_org:
+          type: string
+        provider_specialty:
+          type: string
+        source_type:
+          type: string
+        source_ref:
+          type: string
+        encounter_ref:
+          type: string
+        encounter_id:
+          type: string
+          format: uuid
+        confidence:
+          type: number
+        dataset_version:
+          type: string
+      required:
+      - id
+      - patient_id
+      - source_event_id
+      - event_type
+      - source_type
+      - source_ref
+      - dataset_version
+    encounters:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        encounter_time:
+          type: string
+          format: date-time
+        provider_org:
+          type: string
+        source_types:
+          type: string
+        merged_row_count:
+          type: integer
+        dataset_version:
+          type: string
+      required:
+      - id
+      - patient_id
+      - encounter_time
+      - source_types
+      - merged_row_count
+      - dataset_version
+    notes:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        source_ref:
+          type: string
+        note_time:
+          type: string
+          format: date-time
+        note_type:
+          type: string
+        text:
+          type: string
+        text_tsv:
+          type: string
+        processed_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - patient_id
+      - source_ref
+      - note_type
+      - text
+    note_findings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        note_id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        clue_type:
+          type: string
+        finding_value:
+          type: string
+        quoted_sentence:
+          type: string
+        source_ref:
+          type: string
+        extractor_model:
+          type: string
+        extracted_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - note_id
+      - patient_id
+      - clue_type
+      - quoted_sentence
+      - source_ref
+      - extractor_model
+      - extracted_at
+    coverage_periods:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        payer:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        gap_reason:
+          type: string
+      required:
+      - id
+      - patient_id
+    intake_answers:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        question_key:
+          type: string
+        answer_value:
+          type: string
+        answered_at:
+          type: string
+          format: date-time
+        event_id:
+          type: string
+          format: uuid
+        is_complete:
+          type: boolean
+      required:
+      - id
+      - patient_id
+      - question_key
+      - answer_value
+      - answered_at
+      - is_complete
+    eval_labels:
+      type: object
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        eval_cutoff_date:
+          type: string
+          format: date
+        split:
+          type: string
+        archetype:
+          type: string
+        typicality:
+          type: string
+        clue_density:
+          type: number
+        hla_b27_true:
+          type: boolean
+        axspa_label:
+          type: boolean
+        simulated_diagnosis_date:
+          type: string
+          format: date
+      required:
+      - patient_id
+      - eval_cutoff_date
+      - split
+    encounter_truth:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        true_encounter_id:
+          type: string
+        encounter_time:
+          type: string
+          format: date-time
+        visible_in_sources:
+          type: boolean
+        matched_encounter_id:
+          type: string
+          format: uuid
+      required:
+      - id
+      - patient_id
+      - true_encounter_id
+      - encounter_time
+      - visible_in_sources
+    condition_packs:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        pack_key:
+          type: string
+        version:
+          type: integer
+        enabled:
+          type: boolean
+        config:
+          type: string
+        awaiting_review:
+          type: string
+        updated_by:
+          type: string
+          format: uuid
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - pack_key
+      - version
+      - enabled
+      - config
+      - updated_at
+    pack_change_log:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        pack_id:
+          type: string
+          format: uuid
+        changed_by:
+          type: string
+          format: uuid
+        changed_at:
+          type: string
+          format: date-time
+        change_summary:
+          type: string
+      required:
+      - id
+      - pack_id
+      - changed_by
+      - changed_at
+      - change_summary
+    case_scores:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        pack_version:
+          type: integer
+        model_run_id:
+          type: string
+          format: uuid
+        tier:
+          type: string
+        one_line_reason:
+          type: string
+        cutoff_date:
+          type: string
+          format: date
+        reachable_history_months:
+          type: integer
+        scored_without_model:
+          type: boolean
+        spartan_points:
+          type: integer
+        prior_tier:
+          type: string
+        scored_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - patient_id
+      - pack_version
+      - tier
+      - one_line_reason
+      - cutoff_date
+      - reachable_history_months
+      - scored_without_model
+      - scored_at
+    evidence_items:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        case_score_id:
+          type: string
+          format: uuid
+        direction:
+          type: string
+        label:
+          type: string
+        event_id:
+          type: string
+          format: uuid
+        note_finding_id:
+          type: string
+          format: uuid
+        item_date:
+          type: string
+          format: date
+        source_tag:
+          type: string
+        rank:
+          type: integer
+      required:
+      - id
+      - case_score_id
+      - direction
+      - label
+      - source_tag
+      - rank
+    criteria_results:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        case_score_id:
+          type: string
+          format: uuid
+        criterion_key:
+          type: string
+        criterion_set:
+          type: string
+        status:
+          type: string
+        points:
+          type: integer
+        supporting_evidence_id:
+          type: string
+          format: uuid
+        what_would_answer_it:
+          type: string
+      required:
+      - id
+      - case_score_id
+      - criterion_key
+      - criterion_set
+      - status
+    counter_evidence_hits:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        case_score_id:
+          type: string
+          format: uuid
+        rule_key:
+          type: string
+        plain_language:
+          type: string
+        alternative_explanation:
+          type: string
+        tier_cap:
+          type: string
+        awaiting_clinical_review:
+          type: boolean
+      required:
+      - id
+      - case_score_id
+      - rule_key
+      - plain_language
+      - tier_cap
+      - awaiting_clinical_review
+    workup_suggestions:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        case_score_id:
+          type: string
+          format: uuid
+        item_key:
+          type: string
+        patient_specific_reason:
+          type: string
+        already_done:
+          type: boolean
+        done_date:
+          type: string
+          format: date
+        done_result:
+          type: string
+      required:
+      - id
+      - case_score_id
+      - item_key
+      - patient_specific_reason
+      - already_done
+    workup_outcomes:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        recorded_by:
+          type: string
+          format: uuid
+        recorded_at:
+          type: string
+          format: date-time
+        results:
+          type: string
+        resulting_tier:
+          type: string
+        patient_update_text:
+          type: string
+      required:
+      - id
+      - patient_id
+      - recorded_by
+      - recorded_at
+      - results
+    decisions:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        case_score_id:
+          type: string
+          format: uuid
+        clinician_id:
+          type: string
+          format: uuid
+        decision:
+          type: string
+        reason:
+          type: string
+        tier_at_time:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        superseded_by:
+          type: string
+          format: uuid
+      required:
+      - id
+      - patient_id
+      - case_score_id
+      - clinician_id
+      - decision
+      - tier_at_time
+      - created_at
+    generated_texts:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        case_score_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        sentences:
+          type: string
+        all_citations_resolved:
+          type: boolean
+        model_name:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - patient_id
+      - kind
+      - sentences
+      - all_citations_resolved
+      - model_name
+      - generated_at
+    model_runs:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        dataset_version:
+          type: string
+        seed:
+          type: integer
+        feature_list:
+          type: string
+        artefact_s3_key:
+          type: string
+        operating_threshold:
+          type: number
+        threshold_objective:
+          type: string
+        val_metrics:
+          type: string
+        test_metrics:
+          type: string
+        test_evaluations_count:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - dataset_version
+      - seed
+      - feature_list
+      - artefact_s3_key
+      - operating_threshold
+      - threshold_objective
+      - test_evaluations_count
+      - is_active
+      - created_at
+    evaluation_runs:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        split:
+          type: string
+        model_run_id:
+          type: string
+          format: uuid
+        pack_version:
+          type: integer
+        dataset_version:
+          type: string
+        reachable_history_threshold:
+          type: string
+        metrics:
+          type: string
+        run_date:
+          type: string
+          format: date-time
+      required:
+      - id
+      - split
+      - pack_version
+      - dataset_version
+      - reachable_history_threshold
+      - metrics
+      - run_date
+    ingest_runs:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        dataset_version:
+          type: string
+        seed:
+          type: integer
+        status:
+          type: string
+        patient_count:
+          type: integer
+        dedup_report:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - dataset_version
+      - status
+      - started_at
+    ingest_file_results:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ingest_run_id:
+          type: string
+          format: uuid
+        file_name:
+          type: string
+        rows_loaded:
+          type: integer
+        rows_rejected:
+          type: integer
+        status:
+          type: string
+        error_detail:
+          type: string
+      required:
+      - id
+      - ingest_run_id
+      - file_name
+      - rows_loaded
+      - rows_rejected
+      - status
+    job_runs:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        status:
+          type: string
+        progress_pct:
+          type: integer
+        progress_message:
+          type: string
+        result:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - kind
+      - status
+      - progress_pct
+      - started_at
+    personas:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        persona_key:
+          type: string
+        name:
+          type: string
+        one_line_description:
+          type: string
+        patient_id:
+          type: string
+          format: uuid
+        expected_outcome:
+          type: string
+      required:
+      - id
+      - persona_key
+      - name
+      - one_line_description
+      - patient_id
