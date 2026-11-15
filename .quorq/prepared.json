@@ -1,0 +1,144 @@
+{
+  "key": {
+    "app_design_id": "e937718a-4136-482d-838a-535f5437ff04",
+    "app_design_version": 2,
+    "architecture_document_id": "a370651f-e80b-4329-a939-76886fd87038",
+    "architecture_version": 1
+  },
+  "outcome": "attempted-incomplete",
+  "packages": [
+    {
+      "ecosystem": "pypi",
+      "installed_version": "2.8.0",
+      "name": "anthropic",
+      "status": "installed",
+      "version": ">=0.40.0"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "3.0.0",
+      "name": "rq",
+      "status": "installed",
+      "version": ">=1.16"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "8.1.0",
+      "name": "redis",
+      "status": "installed",
+      "version": ">=5.0"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "1.44.3",
+      "name": "boto3",
+      "status": "installed",
+      "version": ">=1.34"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "6.12.5",
+      "name": "sendgrid",
+      "status": "installed",
+      "version": ">=6.11"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "1.7.4",
+      "name": "passlib",
+      "status": "installed",
+      "version": ">=1.7.4"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "5.0.0",
+      "name": "bcrypt",
+      "status": "installed",
+      "version": ">=4.1"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "3.1.1",
+      "name": "pandas",
+      "status": "installed",
+      "version": ">=2.2"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "1.9.1",
+      "name": "scikit-learn",
+      "status": "installed",
+      "version": ">=1.5"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "70.0",
+      "name": "weasyprint",
+      "status": "installed",
+      "version": ">=62.0"
+    },
+    {
+      "ecosystem": "system",
+      "name": "libpango-1.0-0",
+      "status": "image",
+      "version": ""
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "3.1.6",
+      "name": "jinja2",
+      "status": "installed",
+      "version": ">=3.1"
+    },
+    {
+      "ecosystem": "pypi",
+      "installed_version": "0.0.33",
+      "name": "python-multipart",
+      "status": "installed",
+      "version": ">=0.0.9"
+    },
+    {
+      "ecosystem": "npm",
+      "error": "already provided by the scaffold",
+      "name": "react-router-dom",
+      "status": "skipped",
+      "version": ">=6.26"
+    },
+    {
+      "ecosystem": "npm",
+      "error": "already provided by the scaffold",
+      "name": "qrcode.react",
+      "status": "skipped",
+      "version": ">=4.0"
+    },
+    {
+      "ecosystem": "npm",
+      "error": "already provided by the scaffold",
+      "name": "@tanstack/react-query",
+      "status": "skipped",
+      "version": ">=5.51"
+    },
+    {
+      "ecosystem": "npm",
+      "error": "already provided by the scaffold",
+      "name": "framer-motion",
+      "status": "skipped",
+      "version": ">=11.3"
+    },
+    {
+      "ecosystem": "npm",
+      "error": "already provided by the scaffold",
+      "name": "recharts",
+      "status": "skipped",
+      "version": ">=2.12"
+    },
+    {
+      "ecosystem": "npm",
+      "error": "already provided by the scaffold",
+      "name": "tailwindcss",
+      "status": "skipped",
+      "version": ">=3.4"
+    }
+  ],
+  "prepared_by_run": "9133147e-2f77-4f99-bf4a-bda360e5fb2c"
+}
