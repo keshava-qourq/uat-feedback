@@ -10,7 +10,9 @@ RUN apt-get update \
 # END QUORQ SYSTEM PACKAGES
 
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# --only-binary :all: installs from wheels only, so no dependency's setup.py
+# runs at build time. Every pinned requirement publishes a wheel for this base.
+RUN pip install --no-cache-dir --only-binary :all: -r requirements.txt
 
 COPY app ./app
 

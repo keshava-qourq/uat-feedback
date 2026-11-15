@@ -19,6 +19,17 @@ from pathlib import Path
 from typing import BinaryIO
 
 
+def _owner_guard() -> dict[str, str]:
+    """`ExpectedBucketOwner` when the owning account is configured, else nothing.
+
+    Set `S3_EXPECTED_BUCKET_OWNER` (the AWS account id that owns the bucket) and
+    every S3 call fails rather than reading a bucket that changed hands or whose
+    name was taken over by another account.
+    """
+    owner = os.getenv("S3_EXPECTED_BUCKET_OWNER", "").strip()
+    return {"ExpectedBucketOwner": owner} if owner else {}
+
+
 def list_source_files(source_uri: str, prefix: str = "") -> list[str]:
     """The names (relative to the drop) of the files under `prefix` in the drop.
 
@@ -34,7 +45,7 @@ def list_source_files(source_uri: str, prefix: str = "") -> list[str]:
         full_prefix = f"{base}/{prefix}" if base else prefix
         names: list[str] = []
         paginator = client.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=bucket, Prefix=full_prefix):
+        for page in paginator.paginate(Bucket=bucket, Prefix=full_prefix, **_owner_guard()):
             for item in page.get("Contents", []):
                 key = item["Key"]
                 relative = key[len(base) + 1 :] if base else key
@@ -62,7 +73,7 @@ def open_source_file(source_uri: str, name: str) -> Iterator[BinaryIO]:
         import boto3  # imported lazily: never needed for a disk drop
 
         client = boto3.client("s3", region_name=os.getenv("AWS_REGION") or None)
-        body = client.get_object(Bucket=bucket, Key=key)["Body"]
+        body = client.get_object(Bucket=bucket, Key=key, **_owner_guard())["Body"]
         try:
             yield body
         finally:
