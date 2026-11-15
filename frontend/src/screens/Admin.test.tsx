@@ -1,0 +1,98 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import Admin from "./Admin";
+
+const RUN_ID = "11111111-2222-3333-4444-555555555555";
+
+const started = {
+  run_id: RUN_ID,
+  status: "queued",
+  dataset_version: "v0.1",
+  seed: 42,
+  started_at: "2026-11-15T09:12:00+00:00",
+};
+
+const report = (status: string, files: unknown[]) => ({
+  run_id: RUN_ID,
+  status,
+  dataset_version: "v0.1",
+  seed: 42,
+  patient_count: 5006,
+  started_at: "2026-11-15T09:12:00+00:00",
+  finished_at: "2026-11-15T09:14:00+00:00",
+  files,
+});
+
+const PASSED_FILES = [
+  { file: "patients.csv", status: "passed", rows_loaded: 5006, rows_rejected: 0, error: null },
+  { file: "events.csv", status: "passed", rows_loaded: 572418, rows_rejected: 37, error: null },
+];
+
+const FAILED_FILES = [
+  { file: "patients.csv", status: "passed", rows_loaded: 5006, rows_rejected: 0, error: null },
+  {
+    file: "events.csv",
+    status: "failed",
+    rows_loaded: 0,
+    rows_rejected: 0,
+    error: "events.csv is missing the required column source_ref",
+  },
+];
+
+function mockApi(final: ReturnType<typeof report>) {
+  return vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    const u = String(url);
+    const body =
+      init?.method === "POST"
+        ? started
+        : u.endsWith(`/api/admin/ingest-runs/${RUN_ID}`)
+          ? final
+          : null;
+    if (!body) throw new Error("unexpected call " + u);
+    return { ok: true, status: 200, json: async () => body } as Response;
+  });
+}
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", mockApi(report("passed", PASSED_FILES)));
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("Admin ingest report", () => {
+  it("[AC-001/AC-002/AC-003] a successful run renders passed files with their counts", async () => {
+    render(<Admin />);
+    await userEvent.click(screen.getByRole("button", { name: /run ingest/i }));
+
+    await waitFor(() => expect(screen.getByText("572,418")).toBeInTheDocument());
+    expect(screen.getByText(/Dataset v0\.1/)).toBeInTheDocument();
+    expect(screen.getByText(/Seed 42/)).toBeInTheDocument();
+    expect(screen.getByText(/5,006 patients/)).toBeInTheDocument();
+    expect(screen.getByText("passed")).toBeInTheDocument();
+    expect(screen.getByText("patients.csv")).toBeInTheDocument();
+    expect(screen.getByText("events.csv")).toBeInTheDocument();
+    expect(screen.getByText("2 of 2")).toBeInTheDocument();
+
+    const post = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(post[0])).toMatch(/\/api\/admin\/ingest-runs$/);
+    expect((post[1] as RequestInit).method).toBe("POST");
+  });
+
+  it("[AC-003] a failed file's row shows its named reason", async () => {
+    vi.stubGlobal("fetch", mockApi(report("failed", FAILED_FILES)));
+    render(<Admin />);
+    await userEvent.click(screen.getByRole("button", { name: /run ingest/i }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("events.csv is missing the required column source_ref"),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.getByText("failed")).toBeInTheDocument();
+    expect(screen.getAllByText(/Failed/).length).toBeGreaterThan(0);
+  });
+});
