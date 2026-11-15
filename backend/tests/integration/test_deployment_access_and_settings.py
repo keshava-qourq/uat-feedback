@@ -125,8 +125,7 @@ def test_ac146_nfr010_a_wrong_bearer_is_refused(api: TestClient) -> None:
     for path in (f"/api/admin/ingest-runs/{uuid.uuid4()}", SETTINGS):
         response = api.get(path, headers=headers)
         assert response.status_code == 401, (
-            f"GET {path} with a wrong bearer returned {response.status_code}: "
-            f"{response.text[:200]}"
+            f"GET {path} with a wrong bearer returned {response.status_code}: {response.text[:200]}"
         )
         assert set(response.json()) == {"detail"}
 
