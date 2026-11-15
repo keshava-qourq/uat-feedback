@@ -1,5 +1,4 @@
 // @ts-nocheck -- generated from the approved design under its JS runtime contract; not hand-written TypeScript.
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from "react";
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from "@tanstack/react-query";
 
@@ -7,10 +6,6 @@ import { apiFetch } from "@/lib/api";
 import * as UI from "@/lib/ui";
 import { Icons } from "@/lib/icons";
 import { brand } from "@/lib/brand";
-
-const { Button, Input, Label, Select, Table, THead, TBody, TR, TH, TD, Empty } = UI;
-
-const { Home, Edit, ArrowLeft, ArrowRight } = Icons;
 
 const DEDUP = [
   {

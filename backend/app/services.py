@@ -21,7 +21,8 @@ from sqlalchemy.exc import SQLAlchemyError
 _CHECK_TIMEOUT_SECONDS = 2
 
 
-def _check_database() -> bool:
+def database_reachable() -> bool:
+    """Whether the configured Postgres answers right now."""
     url = os.getenv("DATABASE_URL")
     if not url:
         return False
@@ -58,11 +59,6 @@ def _check_redis() -> bool:
         return False
 
 
-def database_reachable() -> bool:
-    """Whether the configured Postgres answers right now."""
-    return _check_database()
-
-
 def configured_services() -> dict[str, bool]:
     """Whether each backing service answers right now: `db`, `cache`, `queue`.
 
@@ -72,7 +68,7 @@ def configured_services() -> dict[str, bool]:
     """
     redis_ok = _check_redis()
     return {
-        "db": _check_database(),
+        "db": database_reachable(),
         "cache": redis_ok,
         "queue": redis_ok,
     }

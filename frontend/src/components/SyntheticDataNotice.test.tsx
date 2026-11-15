@@ -44,6 +44,25 @@ describe("SyntheticDataNotice", () => {
     },
   );
 
+  it("[AC-SIMPLIFY] a shell route is still drawn inside the app menu", () => {
+    render(
+      <MemoryRouter initialEntries={["/worklist"]}>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("navigation", { name: "App menu" })).toBeInTheDocument();
+  });
+
+  it("[AC-SIMPLIFY] /start is still drawn without the app menu", () => {
+    render(
+      <MemoryRouter initialEntries={["/start"]}>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("navigation", { name: "App menu" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("synthetic-data-notice")).toBeInTheDocument();
+  });
+
   it("[AC-119] an unregistered route still shows the notice after its redirect", () => {
     render(
       <MemoryRouter initialEntries={["/nowhere"]}>

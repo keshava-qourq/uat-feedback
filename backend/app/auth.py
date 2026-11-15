@@ -24,16 +24,21 @@ def shared_secret() -> str:
     return os.getenv("API_SECRET_KEY") or os.getenv("SECRET_KEY") or ""
 
 
-def require_bearer(authorization: str | None = Header(default=None)) -> None:
-    """401 unless the request carries the configured shared bearer token."""
+def _is_shared_bearer(authorization: str | None) -> bool:
+    """Whether this header carries the configured shared bearer, exactly."""
     expected = shared_secret()
     scheme, _, token = (authorization or "").partition(" ")
-    if (
-        not expected
-        or scheme.lower() != "bearer"
-        or not token
-        or not hmac.compare_digest(token.strip(), expected)
-    ):
+    return bool(
+        expected
+        and scheme.lower() == "bearer"
+        and token.strip()
+        and hmac.compare_digest(token.strip(), expected)
+    )
+
+
+def require_bearer(authorization: str | None = Header(default=None)) -> None:
+    """401 unless the request carries the configured shared bearer token."""
+    if not _is_shared_bearer(authorization):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
 
@@ -47,14 +52,7 @@ def require_api_access(
     administrator signed in through `POST /api/auth/login` presents a session
     token instead, and that is accepted here too -- never anything weaker.
     """
-    expected = shared_secret()
-    scheme, _, token = (authorization or "").partition(" ")
-    if (
-        expected
-        and scheme.lower() == "bearer"
-        and token.strip()
-        and hmac.compare_digest(token.strip(), expected)
-    ):
+    if _is_shared_bearer(authorization):
         return
     from app.sessions import bearer_token, current_user, require_staff
 

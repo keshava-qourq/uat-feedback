@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Event, Patient, Persona, User
-from app.notice import SYNTHETIC_DATA_NOTICE, with_notice
+from app.notice import with_notice
 from app.pdf import render_pdf
 from app.sessions import CurrentUser, require_staff
 
@@ -35,6 +35,13 @@ def _iso(value: Any) -> str | None:
     return None if value is None else value.isoformat()
 
 
+def _history_lines(items: list[dict[str, Any]]) -> list[str]:
+    """One line per timeline item, for a PDF page; never an empty page."""
+    return [f"{item['item_time']} {item['display'] or ''}" for item in items] or [
+        "No history to show."
+    ]
+
+
 def _patients(db: Session) -> list[Patient]:
     return list(db.execute(select(Patient).order_by(Patient.display_name)).scalars())
 
@@ -44,7 +51,8 @@ def _my_patient(db: Session, user: User) -> Patient | None:
     patient of the cohort for a clinician or admin previewing the screen."""
     if user.patient_id:
         return db.get(Patient, user.patient_id)
-    return _patients(db)[0] if _patients(db) else None
+    cohort = _patients(db)
+    return cohort[0] if cohort else None
 
 
 def _timeline_items(db: Session, patient: Patient | None) -> list[dict[str, Any]]:
@@ -121,11 +129,16 @@ def my_visit_prep(user: CurrentUser, db: Db) -> dict[str, Any]:
 @router.get("/api/patients/me/visit-prep.pdf")
 def my_visit_prep_pdf(user: CurrentUser, db: Db) -> Response:
     sheet = _visit_prep(db, _my_patient(db, user))
-    first = ["Visit prep sheet", f"Patient: {sheet['display_name'] or 'unassigned'}", ""]
-    first += [q for q in sheet["questions"]]
-    rest = [str(item["item_time"]) + " " + str(item["display"] or "") for item in sheet["items"]]
-    pages = [first, rest or ["No history to show."]]
-    return Response(content=render_pdf(pages), media_type="application/pdf")
+    first = [
+        "Visit prep sheet",
+        f"Patient: {sheet['display_name'] or 'unassigned'}",
+        "",
+        *sheet["questions"],
+    ]
+    return Response(
+        content=render_pdf([first, _history_lines(sheet["items"])]),
+        media_type="application/pdf",
+    )
 
 
 def _persona_bundle(db: Session, persona: Persona, view: str) -> dict[str, Any]:
@@ -207,16 +220,12 @@ def referral_packet_pdf(patient_id: str, user: Staff, db: Db) -> Response:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"no patient {patient_id}"
         )
-    items = _timeline_items(db, patient)
     pages = [
         [
             "Referral packet",
             f"Patient: {patient.display_name}",
             f"Dataset id: {patient.dataset_patient_id}",
-            "",
-            SYNTHETIC_DATA_NOTICE,
         ],
-        [str(item["item_time"]) + " " + str(item["display"] or "") for item in items]
-        or ["No history to show."],
+        _history_lines(_timeline_items(db, patient)),
     ]
     return Response(content=render_pdf(pages), media_type="application/pdf")

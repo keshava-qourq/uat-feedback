@@ -32,7 +32,8 @@ export const ROUTES: ReadonlyArray<{ path: string; element: ReactNode }> = [
   { path: "/admin", element: <Admin /> },
 ];
 
-const SHELL_LESS_PATHS = ["/start"];
+// /start is the demo entry point and is drawn without the app menu around it.
+const inShell = (path: string) => path !== "/start";
 
 // NFR-017: mounted once, around every route, so no screen file hand-adds the notice.
 function RootLayout() {
@@ -98,11 +99,11 @@ export default function App() {
     <Routes>
       <Route element={<RootLayout />}>
         <Route element={<AppShellLayout />}>
-          {ROUTES.filter((route) => !SHELL_LESS_PATHS.includes(route.path)).map((route) => (
+          {ROUTES.filter((route) => inShell(route.path)).map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
         </Route>
-        {ROUTES.filter((route) => SHELL_LESS_PATHS.includes(route.path)).map((route) => (
+        {ROUTES.filter((route) => !inShell(route.path)).map((route) => (
           <Route key={route.path} path={route.path} element={route.element} />
         ))}
         <Route path="*" element={<Navigate to="/start" replace />} />
