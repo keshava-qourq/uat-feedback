@@ -9,14 +9,19 @@ OpenAPI document and passes its tests before a single handler is implemented.
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401 -- imported so the tables register before create_all
+from app.auth import is_authenticated_request
 from app.bootstrap import seed_bootstrap_accounts
-from app.database import Base, SessionLocal, engine
-from app.routers import auth, data, ingest_runs
+from app.database import Base, SessionLocal, engine, get_db
+from app.dataset import active_dataset_version
+from app.routers import admin, auth, data, ingest_runs
 from app.services import configured_services
 
 
@@ -64,13 +69,39 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def require_authentication(request: Request, call_next):
+    """AC-146: every route except the open ones refuses an unauthenticated request.
+
+    Interim, pending the full session-auth story: a request must carry a
+    bearer token to get past here at all. The route's own dependency then
+    decides whether that token is the shared `API_SECRET_KEY` or a live
+    session.
+    """
+    if request.method == "OPTIONS" or is_authenticated_request(
+        request.url.path, request.headers.get("authorization")
+    ):
+        return await call_next(request)
+    return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+
+
 app.include_router(auth.router)
 app.include_router(data.router)
 app.include_router(ingest_runs.router)
+app.include_router(admin.router)
 
 
 @app.get("/health")
-async def health() -> dict[str, object]:
-    """Liveness and readiness, per the approved API spec: {status, db, cache, queue}."""
+def health(db: Annotated[Session, Depends(get_db)]) -> dict[str, object]:
+    """Liveness and readiness: {status, dataset_version, services} (AC-144).
+
+    Unauthenticated and always reachable, so a probe can tell a process that
+    is up from a Postgres or Redis that is down.
+    """
     services = configured_services()
-    return {"status": "ok", **services}
+    return {
+        "status": "ok",
+        "dataset_version": active_dataset_version(db),
+        "services": services,
+        "db": services["db"],
+    }

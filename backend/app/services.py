@@ -58,6 +58,11 @@ def _check_redis() -> bool:
         return False
 
 
+def database_reachable() -> bool:
+    """Whether the configured Postgres answers right now."""
+    return _check_database()
+
+
 def configured_services() -> dict[str, bool]:
     """Whether each backing service answers right now: `db`, `cache`, `queue`.
 

@@ -11,13 +11,22 @@ from __future__ import annotations
 
 import hmac
 import os
+from typing import Annotated
 
-from fastapi import Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+
+
+def shared_secret() -> str:
+    """The configured shared bearer: `API_SECRET_KEY`, or the platform's `SECRET_KEY`."""
+    return os.getenv("API_SECRET_KEY") or os.getenv("SECRET_KEY") or ""
 
 
 def require_bearer(authorization: str | None = Header(default=None)) -> None:
     """401 unless the request carries the configured shared bearer token."""
-    expected = os.getenv("SECRET_KEY") or ""
+    expected = shared_secret()
     scheme, _, token = (authorization or "").partition(" ")
     if (
         not expected
@@ -26,3 +35,54 @@ def require_bearer(authorization: str | None = Header(default=None)) -> None:
         or not hmac.compare_digest(token.strip(), expected)
     ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+
+def require_api_access(
+    authorization: str | None = Header(default=None),
+    db: Annotated[Session, Depends(get_db)] = None,  # type: ignore[assignment]
+) -> None:
+    """401 unless the request carries the shared bearer *or* a live staff session.
+
+    The shared `API_SECRET_KEY` is the interim machine credential (AC-146); an
+    administrator signed in through `POST /api/auth/login` presents a session
+    token instead, and that is accepted here too -- never anything weaker.
+    """
+    expected = shared_secret()
+    scheme, _, token = (authorization or "").partition(" ")
+    if (
+        expected
+        and scheme.lower() == "bearer"
+        and token.strip()
+        and hmac.compare_digest(token.strip(), expected)
+    ):
+        return
+    from app.sessions import bearer_token, current_user, require_staff
+
+    require_staff(current_user(bearer_token(authorization), db))
+
+
+#: Paths reachable with no credentials at all: liveness, the OpenAPI document
+#: the SPA's tooling reads, and the sign-in route that issues a token.
+OPEN_PATHS = frozenset(
+    {
+        "/health",
+        "/openapi.json",
+        "/docs",
+        "/docs/oauth2-redirect",
+        "/redoc",
+        "/api/auth/login",
+    }
+)
+
+
+def is_authenticated_request(path: str, authorization: str | None) -> bool:
+    """Whether a request may proceed past the gate (AC-146).
+
+    Open paths always may. Everything else needs a bearer header: the shared
+    `API_SECRET_KEY` passes outright, and any other bearer is left to the
+    route's own session check, which 401s when it is not a live session.
+    """
+    if path in OPEN_PATHS:
+        return True
+    scheme, _, token = (authorization or "").partition(" ")
+    return scheme.lower() == "bearer" and bool(token.strip())

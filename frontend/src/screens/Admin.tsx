@@ -275,6 +275,19 @@ const ReviewMark = ({ status }) =>
     </span>
   );
 
+const MASKED = "••••••••";
+
+const ConnectionStatus = ({ status }) =>
+  status === "connected" ? (
+    <span className="mark mark-ok">
+      <Icons.CheckCircle className="h-4 w-4" aria-hidden="true" /> Connected
+    </span>
+  ) : (
+    <span className="mark mark-wait">
+      <Icons.AlertCircle className="h-4 w-4" aria-hidden="true" /> Not configured
+    </span>
+  );
+
 const FileStatus = ({ kind }) => {
   if (kind === "passed")
     return (
@@ -335,6 +348,11 @@ function AdminScreen() {
       setRunId(data.run_id);
     },
     onError: (err) => setStartError(err.message || "Could not start the ingest run."),
+  });
+
+  const settings = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: () => apiFetch("/api/admin/settings"),
   });
 
   const report = useQuery({
@@ -694,6 +712,57 @@ function AdminScreen() {
               </p>
             )}
           </div>
+        </section>
+
+        {/* Connections and settings */}
+        <section className="frame" aria-labelledby="conn-h">
+          <h2 id="conn-h" className="hd" style={{ fontSize: 18, textAlign: "center" }}>
+            Connections and settings
+          </h2>
+          <Ornament />
+          <p className="small muted" style={{ margin: "0 0 16px", textAlign: "center" }}>
+            Credentials are supplied as deployment configuration. Only a masked placeholder and its
+            status are shown here.
+          </p>
+          {settings.isError ? (
+            <p className="err" role="status">
+              <Icons.AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" /> Could not read
+              the connection settings.
+            </p>
+          ) : settings.isLoading ? (
+            <p className="small muted" style={{ margin: 0, textAlign: "center" }}>
+              Checking connections…
+            </p>
+          ) : (
+            <dl className="grid grid-cols-1 sm:grid-cols-3 gap-6" style={{ margin: 0 }}>
+              <div>
+                <dt className="eyebrow muted" style={{ marginBottom: 4 }}>
+                  Database
+                </dt>
+                <dd style={{ margin: 0 }}>
+                  <span className="mono">{MASKED}</span>{" "}
+                  <ConnectionStatus status={settings.data?.database?.status} />
+                </dd>
+              </div>
+              <div>
+                <dt className="eyebrow muted" style={{ marginBottom: 4 }}>
+                  LLM credential
+                </dt>
+                <dd style={{ margin: 0 }}>
+                  <span className="mono">{MASKED}</span>{" "}
+                  <ConnectionStatus status={settings.data?.llm?.status} />
+                </dd>
+              </div>
+              <div>
+                <dt className="eyebrow muted" style={{ marginBottom: 4 }}>
+                  Active dataset version
+                </dt>
+                <dd className="num" style={{ margin: 0, fontWeight: 700 }}>
+                  {settings.data?.dataset_version ?? "None loaded"}
+                </dd>
+              </div>
+            </dl>
+          )}
         </section>
 
         {/* Row 3 */}

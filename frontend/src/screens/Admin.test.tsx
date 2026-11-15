@@ -41,15 +41,32 @@ const FAILED_FILES = [
   },
 ];
 
-function mockApi(final: ReturnType<typeof report>) {
+const CONNECTED_SETTINGS = {
+  database: { status: "connected" },
+  llm: { status: "connected" },
+  dataset_version: "v0.1",
+};
+
+const UNCONFIGURED_SETTINGS = {
+  database: { status: "not-configured" },
+  llm: { status: "not-configured" },
+  dataset_version: null,
+};
+
+function mockApi(
+  final: ReturnType<typeof report>,
+  settings: Record<string, unknown> = CONNECTED_SETTINGS,
+) {
   return vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
     const u = String(url);
     const body =
       init?.method === "POST"
         ? started
-        : u.endsWith(`/api/admin/ingest-runs/${RUN_ID}`)
-          ? final
-          : null;
+        : u.endsWith("/api/admin/settings")
+          ? settings
+          : u.endsWith(`/api/admin/ingest-runs/${RUN_ID}`)
+            ? final
+            : null;
     if (!body) throw new Error("unexpected call " + u);
     return { ok: true, status: 200, json: async () => body } as Response;
   });
@@ -77,9 +94,10 @@ describe("Admin ingest report", () => {
     expect(screen.getByText("events.csv")).toBeInTheDocument();
     expect(screen.getByText("2 of 2")).toBeInTheDocument();
 
-    const post = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    const post = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.find(
+      (c) => (c[1] as RequestInit | undefined)?.method === "POST",
+    )!;
     expect(String(post[0])).toMatch(/\/api\/admin\/ingest-runs$/);
-    expect((post[1] as RequestInit).method).toBe("POST");
   });
 
   it("[AC-003] a failed file's row shows its named reason", async () => {
@@ -94,5 +112,35 @@ describe("Admin ingest report", () => {
     );
     expect(screen.getByText("failed")).toBeInTheDocument();
     expect(screen.getAllByText(/Failed/).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Admin connections and settings", () => {
+  it("[AC-144/AC-145] a configured deployment shows Connected for both and the dataset version", async () => {
+    render(<Admin />);
+
+    await waitFor(() => expect(screen.getAllByText("Connected")).toHaveLength(2));
+    expect(screen.getByText("Active dataset version")).toBeInTheDocument();
+    expect(screen.getByText("v0.1")).toBeInTheDocument();
+
+    const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.find((c) =>
+      String(c[0]).endsWith("/api/admin/settings"),
+    );
+    expect(call).toBeDefined();
+  });
+
+  it("[AC-145] an unconfigured deployment shows Not configured and never a credential value", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockApi(report("passed", PASSED_FILES), {
+        ...UNCONFIGURED_SETTINGS,
+      }),
+    );
+    const { container } = render(<Admin />);
+
+    await waitFor(() => expect(screen.getAllByText("Not configured")).toHaveLength(2));
+    expect(screen.getByText("None loaded")).toBeInTheDocument();
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/postgres|sk-|password|api[_-]?key/i);
   });
 });

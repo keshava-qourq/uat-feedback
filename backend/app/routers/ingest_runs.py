@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth import require_bearer
+from app.auth import require_api_access
 from app.database import get_db
 from app.ingest import enqueue_ingest
 from app.models import IngestFileResult, IngestRun
@@ -29,7 +29,7 @@ from app.models import IngestFileResult, IngestRun
 router = APIRouter(
     prefix="/api/admin/ingest-runs",
     tags=["admin"],
-    dependencies=[Depends(require_bearer)],
+    dependencies=[Depends(require_api_access)],
 )
 
 IN_PROGRESS = ("queued", "running")
