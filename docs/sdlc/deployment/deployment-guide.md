@@ -27,9 +27,9 @@ Pushes to `main` run `.github/workflows/deploy.yml`, which builds the API image 
 
 **Database:** PostgreSQL · app
 
-**Version:** 9bf7011ad815
+**Version:** 1591a0a33fb5
 
-**Commit:** `9bf7011`
+**Commit:** `1591a0a`
 
 **Finished:** 2026-11-15
 <!-- sdlc:auto:end live -->
