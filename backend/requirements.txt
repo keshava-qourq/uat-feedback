@@ -35,3 +35,6 @@ scikit-learn>=1.5
 sendgrid>=6.11
 weasyprint>=62.0
 # END QUORQ ARCHITECTURE PACKAGES
+# Read back the generated PDF exports in the tests, so "the notice is on every
+# page" (AC-120) is measured per page rather than on the whole byte stream.
+pypdf==5.1.0

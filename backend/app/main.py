@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import models  # noqa: F401 -- imported so the tables register before create_all
 from app.bootstrap import seed_bootstrap_accounts
 from app.database import Base, SessionLocal, engine
-from app.routers import ingest_runs
+from app.routers import auth, data, ingest_runs
 from app.services import configured_services
 
 
@@ -64,6 +64,8 @@ app.add_middleware(
 )
 
 
+app.include_router(auth.router)
+app.include_router(data.router)
 app.include_router(ingest_runs.router)
 
 

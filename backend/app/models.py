@@ -35,6 +35,7 @@ from app.database import Base
 __all__ = [
     "Base",
     "User",
+    "SessionRow",
     "Patient",
     "Event",
     "Note",
@@ -73,6 +74,29 @@ class User(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SessionRow(Base):
+    """One signed-in session: the bearer token's hash and its idle expiry.
+
+    Like `users`, this table is created by `Base.metadata.create_all` at
+    startup rather than by a migration, so sign-in works on a fresh database
+    without a schema change of its own.
+    """
+
+    __tablename__ = "sessions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    idle_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Patient(Base):
