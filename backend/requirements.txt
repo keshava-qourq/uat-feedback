@@ -16,7 +16,13 @@ ruff>=0.6
 
 # BEGIN QUORQ ARCHITECTURE PACKAGES
 anthropic>=0.40.0
-bcrypt>=4.1
+# Pinned below 5.0: passlib 1.7.4's own bcrypt self-test (run once, at import,
+# to detect a historic wraparound bug) sends it a 255-byte secret, and bcrypt
+# 5.0 raises ValueError on any password over 72 bytes rather than truncating
+# -- passlib 1.7.4 does not catch that ValueError, so every bcrypt.hash() call
+# fails before application code runs at all. 4.2.0 keeps the pre-5.0 silent
+# truncation passlib's self-test (and our own 72-byte inputs) expects.
+bcrypt==4.2.0
 boto3>=1.34
 jinja2>=3.1
 pandas>=2.2

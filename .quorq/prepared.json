@@ -5,7 +5,7 @@
     "architecture_document_id": "a370651f-e80b-4329-a939-76886fd87038",
     "architecture_version": 1
   },
-  "outcome": "attempted-incomplete",
+  "outcome": "prepared",
   "packages": [
     {
       "ecosystem": "pypi",

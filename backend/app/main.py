@@ -14,7 +14,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import models  # noqa: F401 -- imported so the tables register before create_all
-from app.database import Base, engine
+from app.bootstrap import seed_bootstrap_accounts
+from app.database import Base, SessionLocal, engine
 from app.services import configured_services
 
 
@@ -30,6 +31,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     read the error, not while pytest collects the files.
     """
     Base.metadata.create_all(bind=engine)
+    # BOOTSTRAP_ADMIN_* / SMOKE_TEST_* are unset locally and in the unit-test run, so
+    # this seeds nothing there -- see app.bootstrap for exactly what it seeds and why.
+    db = SessionLocal()
+    try:
+        seed_bootstrap_accounts(db)
+    finally:
+        db.close()
     yield
 
 
@@ -57,5 +65,6 @@ app.add_middleware(
 
 @app.get("/health")
 async def health() -> dict[str, object]:
-    """Liveness probe, and the only route here that is not a stub."""
-    return {"status": "ok", "services": configured_services()}
+    """Liveness and readiness, per the approved API spec: {status, db, cache, queue}."""
+    services = configured_services()
+    return {"status": "ok", **services}

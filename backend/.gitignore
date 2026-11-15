@@ -6,3 +6,7 @@ venv/
 .mypy_cache/
 *.db
 .env
+# Local-disk fallback for app.storage when S3_BUCKET is unset (a laptop, the
+# unit-test run's default); never the deployed path, which MEDIA_ROOT points
+# elsewhere for.
+/media/
