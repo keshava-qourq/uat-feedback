@@ -9,18 +9,15 @@ OpenAPI document and passes its tests before a single handler is implemented.
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401 -- imported so the tables register before create_all
 from app.auth import is_authenticated_request
 from app.bootstrap import seed_bootstrap_accounts
-from app.database import Base, SessionLocal, engine, get_db
-from app.dataset import active_dataset_version
+from app.database import Base, SessionLocal, engine
 from app.routers import admin, auth, data, ingest_runs
 from app.services import configured_services
 
@@ -92,16 +89,11 @@ app.include_router(admin.router)
 
 
 @app.get("/health")
-def health(db: Annotated[Session, Depends(get_db)]) -> dict[str, object]:
-    """Liveness and readiness: {status, dataset_version, services} (AC-144).
+def health() -> dict[str, object]:
+    """Liveness and readiness: {status, db, cache, queue}, per the API spec.
 
     Unauthenticated and always reachable, so a probe can tell a process that
-    is up from a Postgres or Redis that is down.
+    is up from a Postgres or Redis that is down. The active dataset version
+    belongs to the administrator page (`GET /api/admin/settings`), not here.
     """
-    services = configured_services()
-    return {
-        "status": "ok",
-        "dataset_version": active_dataset_version(db),
-        "services": services,
-        "db": services["db"],
-    }
+    return {"status": "ok", **configured_services()}

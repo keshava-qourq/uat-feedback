@@ -70,18 +70,19 @@ def test_ac144_health_stays_reachable_without_any_header(client: TestClient, bea
 # ------------------------------------------------------------- AC-144 the health body
 
 
-def test_ac144_health_reports_ok_the_dataset_version_and_postgres_reachability(
+def test_ac144_health_reports_ok_and_the_services_it_depends_on(
     client: TestClient, db_session: Session
 ):
+    """Shape per the approved API spec: {status, db, cache, queue} and nothing else."""
     body = client.get("/health").json()
 
     assert body["status"] == "ok"
-    assert body["dataset_version"] is None  # no passed ingest run yet
-    assert isinstance(body["services"]["db"], bool)
+    assert set(body) == {"status", "db", "cache", "queue"}
+    assert all(isinstance(body[name], bool) for name in ("db", "cache", "queue"))
 
 
-def test_ac144_health_reports_the_latest_passed_runs_dataset_version(
-    client: TestClient, db_session: Session
+def test_ac144_settings_reports_the_latest_passed_runs_dataset_version(
+    client: TestClient, db_session: Session, headers: dict[str, str]
 ):
     db_session.add(IngestRun(dataset_version="v-older", status="succeeded"))
     db_session.commit()
@@ -89,7 +90,8 @@ def test_ac144_health_reports_the_latest_passed_runs_dataset_version(
     db_session.add(IngestRun(dataset_version="v-newest", status="succeeded"))
     db_session.commit()
 
-    assert client.get("/health").json()["dataset_version"] == "v-newest"
+    body = client.get("/api/admin/settings", headers=headers).json()
+    assert body["dataset_version"] == "v-newest"
 
 
 # ------------------------------------------------------- AC-145 masked settings
