@@ -18,7 +18,10 @@ export default function SyntheticDataNotice() {
       className="w-full px-4 py-1.5 text-center text-xs font-semibold"
       style={{
         backgroundColor: "var(--brand-primary)",
-        color: "var(--brand-accent)",
+        // The neutral, not the accent: the accent is a mid-tone teal that does not
+        // carry enough contrast on the near-black primary for a notice that must be
+        // legible on every route.
+        color: "var(--brand-neutral)",
       }}
     >
       {SYNTHETIC_DATA_NOTICE}

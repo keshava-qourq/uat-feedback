@@ -1,18 +1,20 @@
 @import "tailwindcss";
 
+/* The approved brand, as the tokens every screen and the component kit read.
+   Changing a value here repaints the app without touching a screen file. */
 :root {
-  --brand-primary: #12201c;
-  --brand-accent: #9fb57f;
-  --brand-neutral: #79857a;
-  --brand-radius: 0px;
-  --brand-font-heading: "Copperplate", "Trajan Pro", "Optima", Georgia, serif;
+  --brand-primary: #111111;
+  --brand-accent: #0e766e;
+  --brand-neutral: #5eead4;
+  --brand-radius: 2px;
+  --brand-font-heading: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --brand-font-body: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --brand-surface: #ffffff;
   --brand-border: #e2e8f0;
   --brand-fg: #0f172a;
   --brand-fg-muted: #64748b;
   --brand-hover: #f1f5f9;
-  --brand-background: #eef1e6;
+  --brand-background: #ffffff;
 }
 
 body {

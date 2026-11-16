@@ -6,7 +6,6 @@ is a stub that returns a typed placeholder, so the service starts, serves its
 OpenAPI document and passes its tests before a single handler is implemented.
 """
 
-import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -17,6 +16,7 @@ from fastapi.responses import JSONResponse
 from app import models  # noqa: F401 -- imported so the tables register before create_all
 from app.auth import is_authenticated_request
 from app.bootstrap import seed_bootstrap_accounts
+from app.config import allowed_origins
 from app.database import Base, SessionLocal, engine
 from app.routers import admin, auth, data, ingest_runs
 from app.services import configured_services
@@ -55,14 +55,20 @@ app = FastAPI(
 # unless that origin is allowed here. In development that is the Vite dev server; when
 # deployed, the platform injects the frontend's real URL as ALLOWED_ORIGINS (comma
 # separated). Point ALLOWED_ORIGINS at the real thing and nothing else has to change.
-_dev_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
-_allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+#
+# allow_credentials is False on purpose: this API carries its session in an
+# `Authorization: Bearer` header and never in a cookie (a cross-origin cookie is
+# dropped unless every attribute is exactly right, and browsers keep tightening
+# that). Nothing here needs the credentialed-request mode, and leaving it off
+# keeps a wildcard origin from ever being silently combined with cookies.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins or _dev_origins,
-    allow_credentials=True,
+    allow_origins=allowed_origins(),
+    allow_credentials=False,
     allow_methods=["*"],
-    allow_headers=["*"],
+    # Authorization is the one header that matters: without it listed, a browser
+    # preflight refuses the bearer every call carries.
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 

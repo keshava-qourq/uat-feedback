@@ -7,66 +7,130 @@ import { Icons } from "@/lib/icons";
 import { brand } from "@/lib/brand";
 import { useNavigate } from "@/lib/navigate";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 const { Textarea, Label } = UI;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 const { Check, X, ChevronRight, Clock, Download, ArrowRight, AlertCircle, CheckCircle } = Icons;
 
 const CASE = {
-  name: 'Maria Alvarez',
-  cutoff: '2024-03-01',
-  tier: 'Moderate',
-  clinician: 'Dr. Priya Raman',
+  name: "Maria Alvarez",
+  cutoff: "2024-03-01",
+  tier: "Moderate",
+  clinician: "Dr. Priya Raman",
 };
 
-const TIERS = ['High', 'Moderate', 'Low', 'Insufficient history'];
+const TIERS = ["High", "Moderate", "Low", "Insufficient history"];
 
 const EVIDENCE_FOR = [
-  { id: 'i-2-0-0', label: 'Uveitis visit', date: '2022-05-12', tag: 'Record', note: 'Ophthalmology visit', go: true },
-  { id: 'i-2-0-1', label: 'Night pain reported', date: '2024-02-10', tag: 'You told us', note: 'Symptom intake answer', go: true },
-  { id: 'i-2-0-2', label: 'Back pain visits ×3', date: null, tag: 'Insurance claim', note: 'Three visits in claims, dates on the timeline', go: true },
+  {
+    id: "i-2-0-0",
+    label: "Uveitis visit",
+    date: "2022-05-12",
+    tag: "Record",
+    note: "Ophthalmology visit",
+    go: true,
+  },
+  {
+    id: "i-2-0-1",
+    label: "Night pain reported",
+    date: "2024-02-10",
+    tag: "You told us",
+    note: "Symptom intake answer",
+    go: true,
+  },
+  {
+    id: "i-2-0-2",
+    label: "Back pain visits ×3",
+    date: null,
+    tag: "Insurance claim",
+    note: "Three visits in claims, dates on the timeline",
+    go: true,
+  },
 ];
 
 const EVIDENCE_AGAINST = [
-  { id: 'i-2-1-0', label: 'Normal CRP', date: '2023-11-02', tag: 'Record', note: 'Lab result', go: true },
-  { id: 'i-2-1-1', label: 'Poor NSAID response not reported', date: null, tag: 'You told us', note: 'No answer in the intake, so nothing to cite on the timeline', go: false },
+  {
+    id: "i-2-1-0",
+    label: "Normal CRP",
+    date: "2023-11-02",
+    tag: "Record",
+    note: "Lab result",
+    go: true,
+  },
+  {
+    id: "i-2-1-1",
+    label: "Poor NSAID response not reported",
+    date: null,
+    tag: "You told us",
+    note: "No answer in the intake, so nothing to cite on the timeline",
+    go: false,
+  },
 ];
 
 const CONFLICTING = [
-  { id: 'i-3-1-0', label: 'Fibromyalgia', date: '2021', tag: 'Record', note: 'May not explain inflammatory features' },
+  {
+    id: "i-3-1-0",
+    label: "Fibromyalgia",
+    date: "2021",
+    tag: "Record",
+    note: "May not explain inflammatory features",
+  },
 ];
 
 const CRITERIA_MET = [
-  { id: 'i-4-0-0', label: 'Inflammatory back pain', status: 'met', detail: 'Night pain, 2024-02-10 · You told us' },
-  { id: 'i-4-0-1', label: 'Uveitis', status: 'met', detail: 'Uveitis visit, 2022-05-12 · Record' },
-  { id: 'i-4-0-2', label: 'SPARTAN points', status: 'points', points: 4, threshold: 6 },
+  {
+    id: "i-4-0-0",
+    label: "Inflammatory back pain",
+    status: "met",
+    detail: "Night pain, 2024-02-10 · You told us",
+  },
+  { id: "i-4-0-1", label: "Uveitis", status: "met", detail: "Uveitis visit, 2022-05-12 · Record" },
+  { id: "i-4-0-2", label: "SPARTAN points", status: "points", points: 4, threshold: 6 },
 ];
 
 const CRITERIA_MISSING = [
-  { id: 'i-4-1-0', label: 'Sacroiliac imaging', status: 'unknown', detail: 'Needs MRI or X-ray' },
-  { id: 'i-4-1-1', label: 'HLA-B27', status: 'not met', detail: 'Negative result on record; this does not rule the condition out' },
+  { id: "i-4-1-0", label: "Sacroiliac imaging", status: "unknown", detail: "Needs MRI or X-ray" },
+  {
+    id: "i-4-1-1",
+    label: "HLA-B27",
+    status: "not met",
+    detail: "Negative result on record; this does not rule the condition out",
+  },
 ];
 
 const WORKUP = [
-  { id: 'i-5-0-0', label: 'Sacroiliac MRI', done: false, why: 'Why: imaging missing, back pain over 3 months' },
-  { id: 'i-5-0-1', label: 'CRP', done: true, why: 'Already done 2023-11-02, normal' },
+  {
+    id: "i-5-0-0",
+    label: "Sacroiliac MRI",
+    done: false,
+    why: "Why: imaging missing, back pain over 3 months",
+  },
+  { id: "i-5-0-1", label: "CRP", done: true, why: "Already done 2023-11-02, normal" },
 ];
 
 const DECISIONS = [
-  { key: 'agree', label: 'Agree' },
-  { key: 'disagree', label: 'Disagree' },
-  { key: 'more', label: 'Need more info' },
+  { key: "agree", label: "Agree" },
+  { key: "disagree", label: "Disagree" },
+  { key: "more", label: "Need more info" },
 ];
 
 const RESULTS = [
-  { key: 'hla', label: 'HLA-B27 negative' },
-  { key: 'crp', label: 'CRP normal' },
-  { key: 'mri', label: 'Sacroiliac MRI negative' },
+  { key: "hla", label: "HLA-B27 negative" },
+  { key: "crp", label: "CRP normal" },
+  { key: "mri", label: "Sacroiliac MRI negative" },
 ];
 
 const Ico = ({ name, size = 16 }) => {
   const C = Icons && Icons[name];
-  return C ? <C aria-hidden="true" width={size} height={size} className="shrink-0" style={{ width: size, height: size }} /> : null;
+  return C ? (
+    <C
+      aria-hidden="true"
+      width={size}
+      height={size}
+      className="shrink-0"
+      style={{ width: size, height: size }}
+    />
+  ) : null;
 };
 
 const surface = () => `color-mix(in srgb, ${brand.backgroundColor} 55%, white)`;
@@ -74,10 +138,10 @@ const soft = () => `color-mix(in srgb, ${brand.primaryColor} 74%, ${brand.backgr
 const hair = () => `color-mix(in srgb, ${brand.primaryColor} 16%, transparent)`;
 const tint = () => `color-mix(in srgb, ${brand.primaryColor} 7%, transparent)`;
 
-const Frame = ({ wf, children, className = '', style = {} }) => (
+const Frame = ({ wf, children, className = "", style = {} }) => (
   <section
     data-wf={wf}
-    className={'cs-enter ' + className}
+    className={"cs-enter " + className}
     style={{
       border: `1px solid ${brand.accentColor}`,
       outline: `1px solid ${brand.primaryColor}`,
@@ -93,9 +157,17 @@ const Frame = ({ wf, children, className = '', style = {} }) => (
 );
 
 const Ornament = () => (
-  <div aria-hidden="true" className="flex items-center gap-3" style={{ margin: '12px 0 16px' }}>
+  <div aria-hidden="true" className="flex items-center gap-3" style={{ margin: "12px 0 16px" }}>
     <span style={{ flex: 1, height: 1, background: brand.accentColor }} />
-    <span style={{ width: 8, height: 8, transform: 'rotate(45deg)', background: brand.primaryColor, border: `1px solid ${brand.accentColor}` }} />
+    <span
+      style={{
+        width: 8,
+        height: 8,
+        transform: "rotate(45deg)",
+        background: brand.primaryColor,
+        border: `1px solid ${brand.accentColor}`,
+      }}
+    />
     <span style={{ flex: 1, height: 1, background: brand.accentColor }} />
   </div>
 );
@@ -108,15 +180,26 @@ const H2 = ({ children, sub, id }) => (
       color: brand.primaryColor,
       fontSize: 16,
       lineHeight: 1.4,
-      letterSpacing: '0.16em',
-      textTransform: 'uppercase',
+      letterSpacing: "0.16em",
+      textTransform: "uppercase",
       fontWeight: 700,
       margin: 0,
     }}
   >
     {children}
     {sub ? (
-      <span style={{ display: 'block', fontFamily: brand.fontBody, fontSize: 13, letterSpacing: 'normal', textTransform: 'none', fontWeight: 400, color: soft(), marginTop: 4 }}>
+      <span
+        style={{
+          display: "block",
+          fontFamily: brand.fontBody,
+          fontSize: 13,
+          letterSpacing: "normal",
+          textTransform: "none",
+          fontWeight: 400,
+          color: soft(),
+          marginTop: 4,
+        }}
+      >
         {sub}
       </span>
     ) : null}
@@ -124,28 +207,59 @@ const H2 = ({ children, sub, id }) => (
 );
 
 const SourceTag = ({ tag }) => {
-  const base = { fontSize: 12, lineHeight: '16px', padding: '2px 8px', letterSpacing: '0.04em', whiteSpace: 'nowrap', borderRadius: 0, fontWeight: 600 };
-  const styles = {
-    'Record': { background: brand.primaryColor, color: brand.accentColor, border: `1px solid ${brand.primaryColor}` },
-    'Insurance claim': { background: 'transparent', color: brand.primaryColor, border: `1px solid ${brand.primaryColor}` },
-    'You told us': { background: 'transparent', color: brand.primaryColor, border: `1px dashed ${brand.primaryColor}`, fontStyle: 'italic' },
+  const base = {
+    fontSize: 12,
+    lineHeight: "16px",
+    padding: "2px 8px",
+    letterSpacing: "0.04em",
+    whiteSpace: "nowrap",
+    borderRadius: 0,
+    fontWeight: 600,
   };
-  return <span style={{ ...base, ...(styles[tag] || styles['Record']) }}>{tag}</span>;
+  const styles = {
+    Record: {
+      background: brand.primaryColor,
+      color: brand.accentColor,
+      border: `1px solid ${brand.primaryColor}`,
+    },
+    "Insurance claim": {
+      background: "transparent",
+      color: brand.primaryColor,
+      border: `1px solid ${brand.primaryColor}`,
+    },
+    "You told us": {
+      background: "transparent",
+      color: brand.primaryColor,
+      border: `1px dashed ${brand.primaryColor}`,
+      fontStyle: "italic",
+    },
+  };
+  return <span style={{ ...base, ...(styles[tag] || styles["Record"]) }}>{tag}</span>;
 };
 
 const EvidenceRow = ({ item }) => {
   const inner = (
     <>
       <span className="min-w-0 flex-1">
-        <span style={{ display: 'block', fontWeight: 600, color: brand.primaryColor }}>{item.label}</span>
-        <span style={{ display: 'block', fontSize: 13, color: soft(), marginTop: 4 }}>
-          {item.date ? <span style={{ fontVariantNumeric: 'tabular-nums' }}>{item.date}</span> : null}
-          {item.date ? ' · ' : ''}
+        <span style={{ display: "block", fontWeight: 600, color: brand.primaryColor }}>
+          {item.label}
+        </span>
+        <span style={{ display: "block", fontSize: 13, color: soft(), marginTop: 4 }}>
+          {item.date ? (
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>{item.date}</span>
+          ) : null}
+          {item.date ? " · " : ""}
           {item.note}
         </span>
       </span>
       <SourceTag tag={item.tag} />
-      {item.go ? <span style={{ color: brand.primaryColor }}><Ico name="ChevronRight" /></span> : <span style={{ width: 16 }} aria-hidden="true" />}
+      {item.go ? (
+        <span style={{ color: brand.primaryColor }}>
+          <Ico name="ChevronRight" />
+        </span>
+      ) : (
+        <span style={{ width: 16 }} aria-hidden="true" />
+      )}
     </>
   );
   return (
@@ -155,14 +269,26 @@ const EvidenceRow = ({ item }) => {
           type="button"
           data-wf={item.id}
           className="cs-row flex w-full items-center gap-3 text-left"
-          style={{ padding: '12px 8px', minHeight: 44, background: 'transparent', border: 0, cursor: 'pointer', fontSize: 14, borderRadius: 0 }}
-          onClick={() => navigate('timeline')}
-          aria-label={`${item.label}${item.date ? ', ' + item.date : ''}, ${item.tag}. Open on the timeline`}
+          style={{
+            padding: "12px 8px",
+            minHeight: 44,
+            background: "transparent",
+            border: 0,
+            cursor: "pointer",
+            fontSize: 14,
+            borderRadius: 0,
+          }}
+          onClick={() => navigate("timeline")}
+          aria-label={`${item.label}${item.date ? ", " + item.date : ""}, ${item.tag}. Open on the timeline`}
         >
           {inner}
         </button>
       ) : (
-        <div data-wf={item.id} className="flex w-full items-center gap-3" style={{ padding: '12px 8px', fontSize: 14 }}>
+        <div
+          data-wf={item.id}
+          className="flex w-full items-center gap-3"
+          style={{ padding: "12px 8px", fontSize: 14 }}
+        >
           {inner}
         </div>
       )}
@@ -171,22 +297,41 @@ const EvidenceRow = ({ item }) => {
 };
 
 const EmptyNote = ({ children }) => (
-  <li style={{ borderTop: `1px solid ${hair()}`, padding: '16px 8px', fontSize: 14, color: soft() }}>{children}</li>
+  <li
+    style={{ borderTop: `1px solid ${hair()}`, padding: "16px 8px", fontSize: 14, color: soft() }}
+  >
+    {children}
+  </li>
 );
 
 const ListBlock = ({ wf, title, children, span }) => (
   <Frame wf={wf} className={span}>
     <H2>{title}</H2>
     <Ornament />
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0, borderBottom: `1px solid ${hair()}` }}>{children}</ul>
+    <ul style={{ listStyle: "none", margin: 0, padding: 0, borderBottom: `1px solid ${hair()}` }}>
+      {children}
+    </ul>
   </Frame>
 );
 
 const StatusMark = ({ status }) => {
-  const map = { met: ['CheckCircle', 'Met'], unknown: ['AlertCircle', 'Unknown'], 'not met': ['X', 'Not met'] };
+  const map = {
+    met: ["CheckCircle", "Met"],
+    unknown: ["AlertCircle", "Unknown"],
+    "not met": ["X", "Not met"],
+  };
   const [icon, word] = map[status] || map.unknown;
   return (
-    <span className="inline-flex items-center gap-1" style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: brand.primaryColor }}>
+    <span
+      className="inline-flex items-center gap-1"
+      style={{
+        fontWeight: 700,
+        fontSize: 12,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: brand.primaryColor,
+      }}
+    >
       <Ico name={icon} size={16} />
       {word}
     </span>
@@ -194,32 +339,43 @@ const StatusMark = ({ status }) => {
 };
 
 const CriterionRow = ({ item }) => (
-  <li data-wf={item.id} style={{ borderTop: `1px solid ${hair()}`, padding: '12px 8px', fontSize: 14 }}>
+  <li
+    data-wf={item.id}
+    style={{ borderTop: `1px solid ${hair()}`, padding: "12px 8px", fontSize: 14 }}
+  >
     <div className="flex items-start justify-between gap-3">
       <span style={{ fontWeight: 600, color: brand.primaryColor }}>
         {item.label}
-        {item.status === 'points' ? (
-          <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 400 }}>: {item.points} of threshold {item.threshold}</span>
+        {item.status === "points" ? (
+          <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 400 }}>
+            : {item.points} of threshold {item.threshold}
+          </span>
         ) : null}
       </span>
-      {item.status !== 'points' ? <StatusMark status={item.status} /> : null}
+      {item.status !== "points" ? <StatusMark status={item.status} /> : null}
     </div>
-    {item.status === 'points' ? (
+    {item.status === "points" ? (
       <div style={{ marginTop: 8 }}>
-        <div role="img" aria-label={`${item.points} of ${item.threshold} points toward the referral threshold`} className="flex gap-1">
+        <div
+          role="img"
+          aria-label={`${item.points} of ${item.threshold} points toward the referral threshold`}
+          className="flex gap-1"
+        >
           {Array.from({ length: item.threshold }).map((_, i) => (
             <span
               key={i}
               style={{
                 width: 24,
                 height: 8,
-                background: i < item.points ? brand.primaryColor : 'transparent',
+                background: i < item.points ? brand.primaryColor : "transparent",
                 border: `1px solid ${brand.primaryColor}`,
               }}
             />
           ))}
         </div>
-        <div style={{ fontSize: 13, color: soft(), marginTop: 4 }}>{item.threshold - item.points} more points reach the referral threshold in the pack.</div>
+        <div style={{ fontSize: 13, color: soft(), marginTop: 4 }}>
+          {item.threshold - item.points} more points reach the referral threshold in the pack.
+        </div>
       </div>
     ) : (
       <div style={{ fontSize: 13, color: soft(), marginTop: 4 }}>{item.detail}</div>
@@ -229,58 +385,85 @@ const CriterionRow = ({ item }) => (
 
 export default function Screen() {
   const navigate = useNavigate();
-  const [decision, setDecision] = React.useState('');
-  const [reason, setReason] = React.useState('');
+  const [decision, setDecision] = React.useState("");
+  const [reason, setReason] = React.useState("");
   const [results, setResults] = React.useState({ hla: false, crp: false, mri: false });
-  const [error, setError] = React.useState('');
+  const [error, setError] = React.useState("");
   const [saved, setSaved] = React.useState(null);
-  const [exportState, setExportState] = React.useState('idle');
+  const [exportState, setExportState] = React.useState("idle");
 
   React.useEffect(() => {
-    if (exportState !== 'preparing') return undefined;
-    const t = setTimeout(() => setExportState('ready'), 900);
+    if (exportState !== "preparing") return undefined;
+    const t = setTimeout(() => setExportState("ready"), 900);
     return () => clearTimeout(t);
   }, [exportState]);
 
   const onSave = (e) => {
     e.preventDefault();
     if (!decision) {
-      setError('Choose Agree, Disagree or Need more info before saving. Your reason is kept.');
+      setError("Choose Agree, Disagree or Need more info before saving. Your reason is kept.");
       return;
     }
-    if (decision !== 'agree' && !reason.trim()) {
-      setError('Add a short reason so the next reviewer can see why you ' + (decision === 'disagree' ? 'disagree.' : 'need more information.'));
+    if (decision !== "agree" && !reason.trim()) {
+      setError(
+        "Add a short reason so the next reviewer can see why you " +
+          (decision === "disagree" ? "disagree." : "need more information."),
+      );
       return;
     }
-    setError('');
+    setError("");
     const label = DECISIONS.find((d) => d.key === decision).label;
     setSaved({
       label,
       reason: reason.trim(),
       results: RESULTS.filter((r) => results[r.key]).map((r) => r.label),
-      at: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+      at: new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
     });
   };
 
   const buttonBase = {
     minHeight: 44,
-    padding: '8px 24px',
+    padding: "8px 24px",
     fontFamily: brand.fontHeading,
     fontSize: 13,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
     fontWeight: 700,
     borderRadius: 0,
-    cursor: 'pointer',
-    width: '100%',
+    cursor: "pointer",
+    width: "100%",
   };
-  const secondary = { ...buttonBase, background: 'transparent', color: brand.primaryColor, border: `1px solid ${brand.primaryColor}` };
-  const primary = { ...buttonBase, background: brand.primaryColor, color: brand.accentColor, border: `1px solid ${brand.primaryColor}` };
+  const secondary = {
+    ...buttonBase,
+    background: "transparent",
+    color: brand.primaryColor,
+    border: `1px solid ${brand.primaryColor}`,
+  };
+  const primary = {
+    ...buttonBase,
+    background: brand.primaryColor,
+    color: brand.accentColor,
+    border: `1px solid ${brand.primaryColor}`,
+  };
 
-  const labelStyle = { fontSize: 13, fontWeight: 600, color: brand.primaryColor, display: 'block', marginBottom: 8 };
+  const labelStyle = {
+    fontSize: 13,
+    fontWeight: 600,
+    color: brand.primaryColor,
+    display: "block",
+    marginBottom: 8,
+  };
 
   return (
-    <div style={{ fontFamily: brand.fontBody, color: brand.primaryColor, fontVariantNumeric: 'tabular-nums', fontSize: 14, lineHeight: 1.5 }}>
+    <div
+      style={{
+        fontFamily: brand.fontBody,
+        color: brand.primaryColor,
+        fontVariantNumeric: "tabular-nums",
+        fontSize: 14,
+        lineHeight: 1.5,
+      }}
+    >
       <style>{`
         .cs-row:hover { background: ${tint()} !important; }
         .cs-btn { transition: background-color .15s ease, color .15s ease, transform .1s ease; }
@@ -300,19 +483,32 @@ export default function Screen() {
         }
       `}</style>
 
-      <div className="cs-page mx-auto grid grid-cols-1 gap-8 md:grid-cols-12" style={{ maxWidth: 1120, padding: '8px 8px 48px' }}>
+      <div
+        className="cs-page mx-auto grid grid-cols-1 gap-8 md:grid-cols-12"
+        style={{ maxWidth: 1120, padding: "8px 8px 48px" }}
+      >
         {/* Row 1 */}
         <div data-wf="b-0-0" className="md:col-span-8">
-          <p style={{ margin: 0, fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase', color: soft() }}>Clinician view · Synthetic worklist patient</p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: soft(),
+            }}
+          >
+            Clinician view · Synthetic worklist patient
+          </p>
           <h1
             style={{
               fontFamily: brand.fontHeading,
               fontSize: 32,
               lineHeight: 1.2,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
               fontWeight: 700,
-              margin: '8px 0 0',
+              margin: "8px 0 0",
             }}
           >
             Case summary — {CASE.name}, 34 F
@@ -325,61 +521,91 @@ export default function Screen() {
             data-wf="b-0-1"
             className="cs-btn inline-flex items-center justify-center gap-2"
             style={secondary}
-            disabled={exportState === 'preparing'}
-            onClick={() => setExportState('preparing')}
+            disabled={exportState === "preparing"}
+            onClick={() => setExportState("preparing")}
           >
             <Ico name="Download" />
-            {exportState === 'preparing' ? 'Preparing packet…' : 'Export referral packet'}
+            {exportState === "preparing" ? "Preparing packet…" : "Export referral packet"}
           </button>
-          <div role="status" aria-live="polite" style={{ fontSize: 13, color: soft(), marginTop: 8, minHeight: 20 }}>
-            {exportState === 'ready'
+          <div
+            role="status"
+            aria-live="polite"
+            style={{ fontSize: 13, color: soft(), marginTop: 8, minHeight: 20 }}
+          >
+            {exportState === "ready"
               ? `Packet ready: status, evidence, criteria and workup, using only records dated before ${CASE.cutoff}.`
-              : ''}
+              : ""}
           </div>
         </div>
 
         {/* Row 2 */}
-        <Frame wf="b-1-0" className="md:col-span-12" style={{ textAlign: 'center', padding: 32 }}>
-          <p style={{ margin: 0, fontSize: 12, letterSpacing: '0.24em', textTransform: 'uppercase', color: soft() }}>Status</p>
+        <Frame wf="b-1-0" className="md:col-span-12" style={{ textAlign: "center", padding: 32 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              letterSpacing: "0.24em",
+              textTransform: "uppercase",
+              color: soft(),
+            }}
+          >
+            Status
+          </p>
           <h2
             style={{
               fontFamily: brand.fontHeading,
               fontSize: 32,
-              letterSpacing: '0.2em',
-              textTransform: 'uppercase',
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
               fontWeight: 700,
-              margin: '8px 0 0',
+              margin: "8px 0 0",
             }}
           >
-            <span className="sr-only">Status: </span>{CASE.tier}
+            <span className="sr-only">Status: </span>
+            {CASE.tier}
           </h2>
           <Ornament />
-          <p style={{ margin: '0 auto', maxWidth: 640, fontSize: 16, lineHeight: 1.5 }}>
+          <p style={{ margin: "0 auto", maxWidth: 640, fontSize: 16, lineHeight: 1.5 }}>
             Night pain, 3 back-pain visits and uveitis; negative HLA-B27 does not rule it out.
           </p>
-          <p style={{ margin: '12px 0 0', fontSize: 13, color: soft() }}>
-            Scored as of cutoff <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: brand.primaryColor }}>{CASE.cutoff}</span>. Only records dated before this day are used.
+          <p style={{ margin: "12px 0 0", fontSize: 13, color: soft() }}>
+            Scored as of cutoff{" "}
+            <span
+              style={{
+                fontVariantNumeric: "tabular-nums",
+                fontWeight: 600,
+                color: brand.primaryColor,
+              }}
+            >
+              {CASE.cutoff}
+            </span>
+            . Only records dated before this day are used.
           </p>
-          <ol aria-label="Status scale" className="flex flex-wrap justify-center gap-2" style={{ listStyle: 'none', margin: '24px 0 0', padding: 0 }}>
+          <ol
+            aria-label="Status scale"
+            className="flex flex-wrap justify-center gap-2"
+            style={{ listStyle: "none", margin: "24px 0 0", padding: 0 }}
+          >
             {TIERS.map((t) => {
               const current = t === CASE.tier;
-              const insufficient = t === 'Insufficient history';
+              const insufficient = t === "Insufficient history";
               return (
                 <li
                   key={t}
-                  aria-current={current ? 'true' : undefined}
+                  aria-current={current ? "true" : undefined}
                   style={{
-                    padding: '4px 16px',
+                    padding: "4px 16px",
                     fontSize: 12,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
                     fontWeight: 700,
-                    background: current ? brand.primaryColor : 'transparent',
+                    background: current ? brand.primaryColor : "transparent",
                     color: current ? brand.accentColor : soft(),
-                    border: `1px ${insufficient ? 'dashed' : 'solid'} ${current ? brand.primaryColor : soft()}`,
+                    border: `1px ${insufficient ? "dashed" : "solid"} ${current ? brand.primaryColor : soft()}`,
                   }}
                 >
-                  {current ? '◆ ' : ''}{t}
+                  {current ? "◆ " : ""}
+                  {t}
                   {current ? <span className="sr-only"> (current status)</span> : null}
                 </li>
               );
@@ -389,26 +615,45 @@ export default function Screen() {
 
         {/* Row 3 */}
         <ListBlock wf="b-2-0" title="Top evidence for" span="md:col-span-6">
-          {EVIDENCE_FOR.length ? EVIDENCE_FOR.map((i) => <EvidenceRow key={i.id} item={i} />) : <EmptyNote>No supporting evidence found before the cutoff.</EmptyNote>}
+          {EVIDENCE_FOR.length ? (
+            EVIDENCE_FOR.map((i) => <EvidenceRow key={i.id} item={i} />)
+          ) : (
+            <EmptyNote>No supporting evidence found before the cutoff.</EmptyNote>
+          )}
         </ListBlock>
         <ListBlock wf="b-2-1" title="Evidence against" span="md:col-span-6">
-          {EVIDENCE_AGAINST.length ? EVIDENCE_AGAINST.map((i) => <EvidenceRow key={i.id} item={i} />) : <EmptyNote>No evidence against found before the cutoff.</EmptyNote>}
+          {EVIDENCE_AGAINST.length ? (
+            EVIDENCE_AGAINST.map((i) => <EvidenceRow key={i.id} item={i} />)
+          ) : (
+            <EmptyNote>No evidence against found before the cutoff.</EmptyNote>
+          )}
         </ListBlock>
 
         {/* Row 4 */}
         <Frame wf="b-3-0" className="md:col-span-6">
           <H2>Counter-evidence</H2>
           <Ornament />
-          <p style={{ margin: 0, fontSize: 15 }}>Widespread pain with normal CRP caps tier at Moderate.</p>
-          <p style={{ margin: '12px 0 0', fontSize: 15 }}>
+          <p style={{ margin: 0, fontSize: 15 }}>
+            Widespread pain with normal CRP caps tier at Moderate.
+          </p>
+          <p style={{ margin: "12px 0 0", fontSize: 15 }}>
             <strong>Alternative:</strong> pattern consistent with fibromyalgia.
           </p>
-          <p style={{ margin: '12px 0 0', fontSize: 13, color: soft() }}>
-            Triggered by: Normal CRP, <span style={{ fontVariantNumeric: 'tabular-nums' }}>2023-11-02</span> · Record
+          <p style={{ margin: "12px 0 0", fontSize: 13, color: soft() }}>
+            Triggered by: Normal CRP,{" "}
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>2023-11-02</span> · Record
           </p>
           <p
             className="inline-flex items-center gap-2"
-            style={{ margin: '16px 0 0', padding: '4px 12px', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', border: `1px dashed ${brand.primaryColor}` }}
+            style={{
+              margin: "16px 0 0",
+              padding: "4px 12px",
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              border: `1px dashed ${brand.primaryColor}`,
+            }}
           >
             <Ico name="Clock" />
             Awaiting clinical review
@@ -417,10 +662,14 @@ export default function Screen() {
         <ListBlock wf="b-3-1" title="Conflicting labels in the record" span="md:col-span-6">
           {CONFLICTING.length ? (
             CONFLICTING.map((i) => (
-              <li key={i.id} data-wf={i.id} style={{ borderTop: `1px solid ${hair()}`, padding: '12px 8px', fontSize: 14 }}>
+              <li
+                key={i.id}
+                data-wf={i.id}
+                style={{ borderTop: `1px solid ${hair()}`, padding: "12px 8px", fontSize: 14 }}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <span style={{ fontWeight: 600 }}>
-                    {i.label} — <span style={{ fontVariantNumeric: 'tabular-nums' }}>{i.date}</span>
+                    {i.label} — <span style={{ fontVariantNumeric: "tabular-nums" }}>{i.date}</span>
                   </span>
                   <SourceTag tag={i.tag} />
                 </div>
@@ -434,44 +683,81 @@ export default function Screen() {
 
         {/* Row 5 */}
         <ListBlock wf="b-4-0" title="Criteria met" span="md:col-span-6">
-          {CRITERIA_MET.map((i) => <CriterionRow key={i.id} item={i} />)}
+          {CRITERIA_MET.map((i) => (
+            <CriterionRow key={i.id} item={i} />
+          ))}
         </ListBlock>
         <Frame wf="b-4-1" className="md:col-span-6">
           <H2>Criteria missing / unknown</H2>
           <Ornament />
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, borderBottom: `1px solid ${hair()}` }}>
-            {CRITERIA_MISSING.map((i) => <CriterionRow key={i.id} item={i} />)}
+          <ul
+            style={{
+              listStyle: "none",
+              margin: 0,
+              padding: 0,
+              borderBottom: `1px solid ${hair()}`,
+            }}
+          >
+            {CRITERIA_MISSING.map((i) => (
+              <CriterionRow key={i.id} item={i} />
+            ))}
           </ul>
-          <p style={{ margin: '12px 0 0', fontSize: 13, color: soft() }}>Unknown is never counted as not met in the SPARTAN total.</p>
+          <p style={{ margin: "12px 0 0", fontSize: 13, color: soft() }}>
+            Unknown is never counted as not met in the SPARTAN total.
+          </p>
         </Frame>
 
         {/* Row 6 */}
         <Frame wf="b-5-0" className="md:col-span-8">
-          <H2 sub="— information to consider, not an order; no diagnosis issued">Suggested workup</H2>
+          <H2 sub="— information to consider, not an order; no diagnosis issued">
+            Suggested workup
+          </H2>
           <Ornament />
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, borderBottom: `1px solid ${hair()}` }}>
+          <ul
+            style={{
+              listStyle: "none",
+              margin: 0,
+              padding: 0,
+              borderBottom: `1px solid ${hair()}`,
+            }}
+          >
             {WORKUP.map((w) => (
-              <li key={w.id} data-wf={w.id} className="flex items-start justify-between gap-3" style={{ borderTop: `1px solid ${hair()}`, padding: '12px 8px', fontSize: 14 }}>
+              <li
+                key={w.id}
+                data-wf={w.id}
+                className="flex items-start justify-between gap-3"
+                style={{ borderTop: `1px solid ${hair()}`, padding: "12px 8px", fontSize: 14 }}
+              >
                 <span>
-                  <span style={{ display: 'block', fontWeight: 600 }}>{w.label}</span>
-                  <span style={{ display: 'block', fontSize: 13, color: soft(), marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>{w.why}</span>
+                  <span style={{ display: "block", fontWeight: 600 }}>{w.label}</span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 13,
+                      color: soft(),
+                      marginTop: 4,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {w.why}
+                  </span>
                 </span>
                 <span
                   className="inline-flex items-center gap-1"
                   style={{
                     fontSize: 12,
                     fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    padding: '2px 8px',
-                    whiteSpace: 'nowrap',
-                    background: w.done ? brand.primaryColor : 'transparent',
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    padding: "2px 8px",
+                    whiteSpace: "nowrap",
+                    background: w.done ? brand.primaryColor : "transparent",
                     color: w.done ? brand.accentColor : brand.primaryColor,
-                    border: `1px ${w.done ? 'solid' : 'dashed'} ${brand.primaryColor}`,
+                    border: `1px ${w.done ? "solid" : "dashed"} ${brand.primaryColor}`,
                   }}
                 >
                   {w.done ? <Ico name="Check" size={12} /> : null}
-                  {w.done ? 'Done' : 'To consider'}
+                  {w.done ? "Done" : "To consider"}
                 </span>
               </li>
             ))}
@@ -491,10 +777,10 @@ export default function Screen() {
                     className="cs-opt flex items-center gap-2"
                     style={{
                       minHeight: 44,
-                      padding: '4px 12px',
-                      cursor: 'pointer',
+                      padding: "4px 12px",
+                      cursor: "pointer",
                       border: `1px solid ${brand.primaryColor}`,
-                      background: decision === d.key ? tint() : 'transparent',
+                      background: decision === d.key ? tint() : "transparent",
                       fontWeight: decision === d.key ? 700 : 400,
                     }}
                   >
@@ -513,24 +799,37 @@ export default function Screen() {
             </fieldset>
 
             <div style={{ marginTop: 16 }}>
-              <Label htmlFor="decision-reason" style={labelStyle}>Reason</Label>
+              <Label htmlFor="decision-reason" style={labelStyle}>
+                Reason
+              </Label>
               <Textarea
                 id="decision-reason"
                 data-wf="i-5-1-1"
                 rows={4}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                aria-describedby={error ? 'decision-error' : undefined}
+                aria-describedby={error ? "decision-error" : undefined}
                 aria-invalid={error ? true : undefined}
-                style={{ width: '100%', borderRadius: 0, border: `1px solid ${brand.primaryColor}`, background: 'transparent', padding: 8, fontSize: 14 }}
+                style={{
+                  width: "100%",
+                  borderRadius: 0,
+                  border: `1px solid ${brand.primaryColor}`,
+                  background: "transparent",
+                  padding: 8,
+                  fontSize: 14,
+                }}
               />
             </div>
 
-            <fieldset data-wf="i-5-1-2" style={{ border: 0, padding: 0, margin: '16px 0 0' }}>
+            <fieldset data-wf="i-5-1-2" style={{ border: 0, padding: 0, margin: "16px 0 0" }}>
               <legend style={labelStyle}>Record workup results</legend>
               <div className="flex flex-col gap-1">
                 {RESULTS.map((r) => (
-                  <label key={r.key} className="cs-opt flex items-center gap-2" style={{ minHeight: 44, padding: '4px 4px', cursor: 'pointer' }}>
+                  <label
+                    key={r.key}
+                    className="cs-opt flex items-center gap-2"
+                    style={{ minHeight: 44, padding: "4px 4px", cursor: "pointer" }}
+                  >
                     <input
                       type="checkbox"
                       checked={results[r.key]}
@@ -548,7 +847,14 @@ export default function Screen() {
                 id="decision-error"
                 role="alert"
                 className="cs-enter flex items-start gap-2"
-                style={{ margin: '16px 0 0', padding: 12, fontSize: 13, border: `1px solid ${brand.primaryColor}`, borderLeftWidth: 4, background: tint() }}
+                style={{
+                  margin: "16px 0 0",
+                  padding: 12,
+                  fontSize: 13,
+                  border: `1px solid ${brand.primaryColor}`,
+                  borderLeftWidth: 4,
+                  background: tint(),
+                }}
               >
                 <Ico name="AlertCircle" />
                 <span>{error}</span>
@@ -558,18 +864,28 @@ export default function Screen() {
               <div
                 role="status"
                 className="cs-enter"
-                style={{ margin: '16px 0 0', padding: 12, fontSize: 13, border: `1px solid ${brand.primaryColor}`, background: tint() }}
+                style={{
+                  margin: "16px 0 0",
+                  padding: 12,
+                  fontSize: 13,
+                  border: `1px solid ${brand.primaryColor}`,
+                  background: tint(),
+                }}
               >
                 <p className="flex items-center gap-2" style={{ margin: 0, fontWeight: 700 }}>
                   <Ico name="CheckCircle" />
                   Decision saved: {saved.label}
                 </p>
-                <p style={{ margin: '4px 0 0', color: soft() }}>
+                <p style={{ margin: "4px 0 0", color: soft() }}>
                   {CASE.clinician} · {saved.at} · tier shown: {CASE.tier}
                 </p>
-                {saved.reason ? <p style={{ margin: '4px 0 0' }}>“{saved.reason}”</p> : null}
-                {saved.results.length ? <p style={{ margin: '4px 0 0' }}>Results noted: {saved.results.join(', ')}.</p> : null}
-                <p style={{ margin: '4px 0 0', color: soft() }}>The tier is unchanged; decisions are stored as data.</p>
+                {saved.reason ? <p style={{ margin: "4px 0 0" }}>“{saved.reason}”</p> : null}
+                {saved.results.length ? (
+                  <p style={{ margin: "4px 0 0" }}>Results noted: {saved.results.join(", ")}.</p>
+                ) : null}
+                <p style={{ margin: "4px 0 0", color: soft() }}>
+                  The tier is unchanged; decisions are stored as data.
+                </p>
               </div>
             ) : null}
           </form>
@@ -582,7 +898,7 @@ export default function Screen() {
             data-wf="b-6-0"
             className="cs-btn inline-flex items-center justify-center gap-2"
             style={secondary}
-            onClick={() => navigate('timeline')}
+            onClick={() => navigate("timeline")}
           >
             Open full timeline
             <Ico name="ArrowRight" />

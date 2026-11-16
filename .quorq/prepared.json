@@ -1,7 +1,7 @@
 {
   "key": {
     "app_design_id": "e937718a-4136-482d-838a-535f5437ff04",
-    "app_design_version": 2,
+    "app_design_version": 3,
     "architecture_document_id": "a370651f-e80b-4329-a939-76886fd87038",
     "architecture_version": 1
   },
@@ -51,7 +51,7 @@
     },
     {
       "ecosystem": "pypi",
-      "installed_version": "5.0.0",
+      "installed_version": "4.2.0",
       "name": "bcrypt",
       "status": "installed",
       "version": ">=4.1"
@@ -140,5 +140,5 @@
       "version": ">=3.4"
     }
   ],
-  "prepared_by_run": "9133147e-2f77-4f99-bf4a-bda360e5fb2c"
+  "prepared_by_run": "ac6c27dc-ea95-48b1-94de-8e78a1e8df74"
 }
