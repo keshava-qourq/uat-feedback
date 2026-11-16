@@ -1,20 +1,44 @@
-"""The condition pack: axSpA configuration, loaded from the database.
+"""The condition pack: all condition logic, as configuration data.
 
-The architecture's `pack` component holds every clinical constant as data
-rather than as code -- ICD-10/CPT/LOINC/HLA-B27/ATC code lists with their
-drift equivalences, signal definitions, ASAS criteria and SPARTAN point items,
-counter-evidence and demotion rules, tier and reachable-history thresholds,
-workup items with their reasoning text, patient-facing copy and the prohibited
-term list -- stored as JSONB in `condition_packs` and versioned on every save.
+Every clinical constant -- code lists with their systems, signal definitions,
+criteria (set-based and point-based), counter-evidence and demotion rules,
+tier and history thresholds, suggested workup items with their reasoning text,
+the patient-facing copy strings and the prohibited-term list -- lives in a
+declarative data file under `app/pack/packs/`, never in application code
+(NFR-019).
 
-This package exists so the rest of the application has one import path for
-that configuration from the first ticket onwards: `app.pack.loader` resolves
-the active pack (and answers cleanly when none is active, which the app must
-start with), and the validation, versioning and change-log behaviour the API
-spec's `GET`/`PUT /api/admin/pack` describe are added here by the tickets that
-own them (US-033 onward), not guessed at now.
+`app.pack.registry` loads and validates those files and exposes a generic,
+key-based API over them; `app.pack.loader` resolves the pack stored in the
+database when one has been saved there. Both answer cleanly when no pack is
+active, which is the state the application starts in.
 """
 
 from app.pack.loader import ActivePack, active_pack, pack_is_active
+from app.pack.registry import (
+    Pack,
+    PackValidationError,
+    active_pack_key,
+    active_pack_status,
+    get_active_pack,
+    list_packs,
+    load_pack,
+    log_active_pack,
+    reload,
+    validate,
+)
 
-__all__ = ["ActivePack", "active_pack", "pack_is_active"]
+__all__ = [
+    "ActivePack",
+    "Pack",
+    "PackValidationError",
+    "active_pack",
+    "active_pack_key",
+    "active_pack_status",
+    "get_active_pack",
+    "list_packs",
+    "load_pack",
+    "log_active_pack",
+    "pack_is_active",
+    "reload",
+    "validate",
+]

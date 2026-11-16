@@ -18,7 +18,8 @@ from app.auth import is_authenticated_request
 from app.bootstrap import seed_bootstrap_accounts
 from app.config import allowed_origins
 from app.database import Base, SessionLocal, engine
-from app.routers import admin, auth, data, ingest_runs
+from app.pack import active_pack_status, log_active_pack
+from app.routers import admin, auth, data, ingest_runs, pack
 from app.services import configured_services
 
 
@@ -41,12 +42,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         seed_bootstrap_accounts(db)
     finally:
         db.close()
+    # One line saying which condition pack is active, or that none is: the app
+    # must start cleanly with no pack (AC-022).
+    log_active_pack()
     yield
 
 
 app = FastAPI(
     title="UAT-Feedback",
-    description="PRD: Diagnostic Odyssey Copilot \u2014 axSpA Proof of Concept",
+    description="PRD: Diagnostic Odyssey Copilot \u2014 Proof of Concept",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -92,6 +96,7 @@ app.include_router(auth.router)
 app.include_router(data.router)
 app.include_router(ingest_runs.router)
 app.include_router(admin.router)
+app.include_router(pack.router)
 
 
 @app.get("/health")
@@ -102,4 +107,10 @@ def health() -> dict[str, object]:
     is up from a Postgres or Redis that is down. The active dataset version
     belongs to the administrator page (`GET /api/admin/settings`), not here.
     """
-    return {"status": "ok", **configured_services()}
+    return {
+        "status": "ok",
+        **configured_services(),
+        # Whether a condition pack is active, and which one. With none, the
+        # value is {"active": false, "key": null} (AC-022).
+        "condition_pack": active_pack_status(),
+    }

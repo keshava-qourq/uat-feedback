@@ -19,6 +19,9 @@ ruff>=0.6
 # page" (AC-120) is measured per page rather than on the whole byte stream.
 pypdf==5.1.0
 
+# The condition packs are declarative YAML data files read at startup.
+PyYAML==6.0.3
+
 # BEGIN QUORQ ARCHITECTURE PACKAGES
 # Pinned to the versions the checks actually ran against. The architecture
 # approved each of these as a minimum ("anthropic >=0.40.0"); an open range

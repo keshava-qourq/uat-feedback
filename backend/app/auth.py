@@ -59,6 +59,19 @@ def require_api_access(
     require_staff(current_user(bearer_token(authorization), db))
 
 
+def require_admin(
+    authorization: str | None = Header(default=None),
+    db: Annotated[Session, Depends(get_db)] = None,  # type: ignore[assignment]
+):
+    """The signed-in administrator. 401 without a live session, 403 for any other role."""
+    from app.sessions import bearer_token, current_user
+
+    user = current_user(bearer_token(authorization), db)
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
+    return user
+
+
 #: Paths reachable with no credentials at all: liveness, the OpenAPI document
 #: the SPA's tooling reads, and the sign-in route that issues a token.
 OPEN_PATHS = frozenset(
