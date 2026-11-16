@@ -3,8 +3,16 @@ FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
+# BEGIN QUORQ SYSTEM PACKAGES
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpango-1.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+# END QUORQ SYSTEM PACKAGES
+
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# --only-binary :all: installs from wheels only, so no dependency's setup.py
+# runs at build time. Every pinned requirement publishes a wheel for this base.
+RUN pip install --no-cache-dir --only-binary :all: -r requirements.txt
 
 COPY app ./app
 

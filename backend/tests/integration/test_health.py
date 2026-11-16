@@ -7,6 +7,13 @@ worked.
 
 The `client` fixture comes from conftest.py and carries a database of its own,
 so these tests never touch the one the application is configured with.
+
+Shape per the approved API spec (`GET /health`): `{status, db, cache, queue}`.
+`db` and `cache`/`queue` report whether Postgres and Redis answer right now;
+the test's own `DATABASE_URL` is the in-memory SQLite the `client` fixture
+substitutes, not a real server, and `REDIS_URL` is whatever this sandbox
+gives the test process -- so this only pins the shape, not whether either
+service happens to be reachable here.
 """
 
 from fastapi.testclient import TestClient
@@ -19,7 +26,10 @@ def test_health_reports_ok(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
-    assert set(body["services"]) == {"redis-queue", "redis"}
+    assert set(body) == {"status", "db", "cache", "queue"}
+    assert isinstance(body["db"], bool)
+    assert isinstance(body["cache"], bool)
+    assert isinstance(body["queue"], bool)
 
 
 def test_the_openapi_document_builds(client: TestClient) -> None:

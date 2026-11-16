@@ -10,11 +10,15 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app import models  # noqa: F401 -- imported so the tables register before create_all
-from app.database import Base, engine
+from app.auth import is_authenticated_request
+from app.bootstrap import seed_bootstrap_accounts
+from app.database import Base, SessionLocal, engine
+from app.routers import admin, auth, data, ingest_runs
 from app.services import configured_services
 
 
@@ -30,6 +34,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     read the error, not while pytest collects the files.
     """
     Base.metadata.create_all(bind=engine)
+    # BOOTSTRAP_ADMIN_* / SMOKE_TEST_* are unset locally and in the unit-test run, so
+    # this seeds nothing there -- see app.bootstrap for exactly what it seeds and why.
+    db = SessionLocal()
+    try:
+        seed_bootstrap_accounts(db)
+    finally:
+        db.close()
     yield
 
 
@@ -55,7 +66,34 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def require_authentication(request: Request, call_next):
+    """AC-146: every route except the open ones refuses an unauthenticated request.
+
+    Interim, pending the full session-auth story: a request must carry a
+    bearer token to get past here at all. The route's own dependency then
+    decides whether that token is the shared `API_SECRET_KEY` or a live
+    session.
+    """
+    if request.method == "OPTIONS" or is_authenticated_request(
+        request.url.path, request.headers.get("authorization")
+    ):
+        return await call_next(request)
+    return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+
+
+app.include_router(auth.router)
+app.include_router(data.router)
+app.include_router(ingest_runs.router)
+app.include_router(admin.router)
+
+
 @app.get("/health")
-async def health() -> dict[str, object]:
-    """Liveness probe, and the only route here that is not a stub."""
-    return {"status": "ok", "services": configured_services()}
+def health() -> dict[str, object]:
+    """Liveness and readiness: {status, db, cache, queue}, per the API spec.
+
+    Unauthenticated and always reachable, so a probe can tell a process that
+    is up from a Postgres or Redis that is down. The active dataset version
+    belongs to the administrator page (`GET /api/admin/settings`), not here.
+    """
+    return {"status": "ok", **configured_services()}
