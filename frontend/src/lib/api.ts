@@ -3,26 +3,17 @@
 // which `vite build` does not catch, because it tree-shakes this module out when no screen
 // imports it yet.
 //
-// Where the generated API lives.
-//
-// Set at build time: the platform bakes the deployed API URL into the frontend build. The
-// fallback is the local backend so a bare `npm run dev` still points somewhere real.
-//
-// The generated screens do NOT use this yet -- they render seeded sample data, exactly as
-// they were approved. This is the seam to replace that with real calls, one screen at a
-// time.
+// Where the deployed API lives: baked in at build time, falling back to the local backend
+// so a bare `npm run dev` still points somewhere real.
 export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 // The shared bearer the deployed API expects (its SECRET_KEY). The platform bakes the
 // same value into both sides at deploy time, so authenticated calls work out of the box.
 export const API_SECRET_KEY: string = import.meta.env.VITE_API_SECRET_KEY ?? "";
 
-// The frontend and the API are on different origins once deployed, so a login flow
-// cannot rely on a cookie coming back (a browser drops a cross-origin cookie unless every
-// attribute is exactly right, and that keeps getting stricter regardless). A ticket that
-// implements login reads `/auth/login`'s token from its response body and calls
-// `setSessionToken` with it; apiFetch then sends it as the bearer on every later call,
-// ahead of the shared secret.
+// The frontend and the API are on different origins once deployed, so sign-in cannot rely
+// on a cookie: SignIn stores the login response's token here and apiFetch sends it as the
+// bearer on every later call, ahead of the shared secret.
 const SESSION_TOKEN_KEY = "session_token";
 
 export function getSessionToken(): string | null {
@@ -63,7 +54,6 @@ export class ApiError extends Error {
 // api.ts cannot route (it is not a component), so it clears the token, remembers why,
 // and announces it; App listens and redirects to /sign-in.
 export const SESSION_EXPIRED_EVENT = "session-expired";
-export const SESSION_EXPIRED_MESSAGE = "Your session expired, please sign in again.";
 
 // The two unauthenticated endpoints: a 401 from login is "invalid credentials", not an
 // expiry, and must not bounce the user or clear anything.

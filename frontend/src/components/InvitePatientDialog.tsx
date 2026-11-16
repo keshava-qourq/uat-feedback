@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 
 /** POST /api/invites response, exactly as the invite contract defines it. */
-export type InviteResponse = {
+type InviteResponse = {
   invite_id: string;
   patient_id: string;
   token: string;

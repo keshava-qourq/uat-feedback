@@ -35,10 +35,6 @@ STATUS_OPENED = "opened"
 STATUS_INTAKE_COMPLETED = "intake_completed"
 STATUS_ISSUED = "issued"
 
-#: What an unusable invite is: consumed, revoked or expired, indistinguishably.
-UNUSABLE = "unusable"
-UNKNOWN = "unknown"
-
 _EMAIL_HTML = Template(
     "<p>Hello,</p>"
     "<p>Your clinician has invited you to share your history:</p>"

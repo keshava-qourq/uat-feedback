@@ -1,5 +1,4 @@
 // @ts-nocheck -- generated from the approved design under its JS runtime contract; not hand-written TypeScript.
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from "react";
 
 import * as UI from "@/lib/ui";
@@ -10,8 +9,6 @@ import { ApiError, apiFetch } from "@/lib/api";
 import InvitePatientDialog from "@/components/InvitePatientDialog";
 
 const { Table, THead, TBody, TR, TH, TD, Empty } = UI;
-
-const { Filter } = Icons;
 
 const TIER_ORDER = { High: 0, Moderate: 1, "Insufficient history": 2, Low: 3 };
 const FILTERS = ["All", "High", "Moderate", "Insufficient history", "Low"];
@@ -170,7 +167,6 @@ export default function Screen() {
   const hair = `color-mix(in srgb, ${P} 16%, transparent)`;
   const soft = `color-mix(in srgb, ${P} 78%, transparent)`;
   const surface = `color-mix(in srgb, ${BG} 45%, white)`;
-  const spacing = 16;
 
   const [filter, setFilter] = React.useState("All");
   const [items, setItems] = React.useState([]);
