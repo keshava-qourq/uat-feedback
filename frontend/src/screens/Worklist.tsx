@@ -7,9 +7,8 @@ import { Icons } from "@/lib/icons";
 import { brand } from "@/lib/brand";
 import { useNavigate } from "@/lib/navigate";
 
- 
 const { Table, THead, TBody, TR, TH, TD, Empty } = UI;
- 
+
 const { Filter } = Icons;
 
 const TIER_ORDER = { High: 0, Moderate: 1, "Insufficient history": 2, Low: 3 };

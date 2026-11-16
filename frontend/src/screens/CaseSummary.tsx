@@ -7,9 +7,8 @@ import { Icons } from "@/lib/icons";
 import { brand } from "@/lib/brand";
 import { useNavigate } from "@/lib/navigate";
 
- 
 const { Textarea, Label } = UI;
- 
+
 const { Check, X, ChevronRight, Clock, Download, ArrowRight, AlertCircle, CheckCircle } = Icons;
 
 const CASE = {

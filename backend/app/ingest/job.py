@@ -98,6 +98,24 @@ class _Rejected(Exception):
     """One row could not be loaded. Counted, not inserted."""
 
 
+class _ProvenanceFailure(_Rejected):
+    """A row with no usable provenance: never inserted, counted and named (AC-007).
+
+    Provenance is `source_type` (one of ehr|claim|patient) and `source_ref`;
+    without both, an event could never be traced back to where it came from,
+    so it may not reach scoring or a screen at all.
+    """
+
+
+#: How many provenance failures one file's `error_detail` names before it stops
+#: listing them: enough to see what is wrong, bounded so a broken drop cannot
+#: write a megabyte of text into the report.
+MAX_REPORTED_FAILURES = 20
+
+#: The only source types a stored event may carry (AC-005).
+SOURCE_TYPES: frozenset[str] = frozenset({"ehr", "claim", "patient"})
+
+
 # --------------------------------------------------------------------------- values
 
 
@@ -194,11 +212,29 @@ def _patient_id(row: dict, ids: dict[str, str]) -> str:
     return internal
 
 
+def _provenance(row: dict, event_id: str) -> tuple[str, str]:
+    """`(source_type, source_ref)`, or a provenance failure naming what is missing."""
+    source_type = _text(row.get("source_type"))
+    source_ref = _text(row.get("source_ref"))
+    if source_type is None:
+        raise _ProvenanceFailure(f"event '{event_id}' is missing source_type")
+    if source_ref is None:
+        raise _ProvenanceFailure(f"event '{event_id}' is missing source_ref")
+    if source_type not in SOURCE_TYPES:
+        raise _ProvenanceFailure(
+            f"event '{event_id}' has source_type '{source_type}', "
+            f"not one of {'|'.join(sorted(SOURCE_TYPES))}"
+        )
+    return source_type, source_ref
+
+
 def _event_row(row: dict, version: str, ids: dict[str, str]) -> dict:
+    event_id = _required_text(row.get("event_id"), "event_id")
+    source_type, source_ref = _provenance(row, event_id)
     return {
         "id": str(uuid.uuid4()),
         "patient_id": _patient_id(row, ids),
-        "source_event_id": _required_text(row.get("event_id"), "event_id"),
+        "source_event_id": event_id,
         "event_time": _timestamp(row.get("event_time"), "event_time"),
         "event_type": _required_text(row.get("event_type"), "event_type"),
         "code_system": _text(row.get("code_system")),
@@ -208,8 +244,8 @@ def _event_row(row: dict, version: str, ids: dict[str, str]) -> dict:
         "unit": _text(row.get("unit")),
         "provider_org": _text(row.get("provider_org")),
         "provider_specialty": _text(row.get("provider_specialty")),
-        "source_type": _required_text(row.get("source_type"), "source_type"),
-        "source_ref": _required_text(row.get("source_ref"), "source_ref"),
+        "source_type": source_type,
+        "source_ref": source_ref,
         "encounter_ref": _text(row.get("encounter_ref")),
         "confidence": _number(row.get("confidence"), "confidence"),
         "dataset_version": version,
@@ -553,8 +589,17 @@ def _load_file(
         model, build = _LOADERS[file_name]
     loaded = 0
     rejected = 0
+    provenance_failures = 0
     first_rejection: str | None = None
-    _progress(run_id, file_name, status="running", rows_loaded=0, rows_rejected=0)
+    provenance_messages: list[str] = []
+    _progress(
+        run_id,
+        file_name,
+        status="running",
+        rows_loaded=0,
+        rows_rejected=0,
+        provenance_failures=0,
+    )
 
     db = SessionLocal()
     try:
@@ -564,6 +609,12 @@ def _load_file(
                 for row in chunk:
                     try:
                         built = build(row, dataset_version, ids)
+                    except _ProvenanceFailure as exc:
+                        rejected += 1
+                        provenance_failures += 1
+                        if len(provenance_messages) < MAX_REPORTED_FAILURES:
+                            provenance_messages.append(f"{file_name}: provenance failure: {exc}")
+                        continue
                     except _Rejected as exc:
                         rejected += 1
                         if first_rejection is None:
@@ -577,7 +628,13 @@ def _load_file(
                     if model is Patient:
                         for mapping in mappings:
                             ids[mapping["dataset_patient_id"]] = mapping["id"]
-                _progress(run_id, file_name, rows_loaded=loaded, rows_rejected=rejected)
+                _progress(
+                    run_id,
+                    file_name,
+                    rows_loaded=loaded,
+                    rows_rejected=rejected,
+                    provenance_failures=provenance_failures,
+                )
         db.commit()
     except BaseException:
         db.rollback()
@@ -591,7 +648,11 @@ def _load_file(
         "status": "pass",
         "rows_loaded": loaded,
         "rows_rejected": rejected,
-        "error_detail": first_rejection,
+        "provenance_failures": provenance_failures,
+        # A provenance failure is reported first, and every one of them is
+        # named: an unsourced event is the loudest thing a drop can be wrong
+        # about (AC-007).
+        "error_detail": "; ".join(provenance_messages) or first_rejection,
     }
 
 
@@ -632,6 +693,7 @@ def run_ingest(
                 status="fail",
                 rows_loaded=0,
                 rows_rejected=0,
+                provenance_failures=0,
                 error_detail=str(exc),
             )
             continue
@@ -643,6 +705,7 @@ def run_ingest(
                 status="fail",
                 rows_loaded=0,
                 rows_rejected=0,
+                provenance_failures=0,
                 error_detail=f"{file_name}: {exc}",
             )
             continue

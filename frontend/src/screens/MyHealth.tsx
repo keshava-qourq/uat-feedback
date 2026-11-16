@@ -1,11 +1,10 @@
 // @ts-nocheck -- generated from the approved design under its JS runtime contract; not hand-written TypeScript.
- 
+
 import React from "react";
 
 import { Icons } from "@/lib/icons";
 import { useNavigate } from "@/lib/navigate";
 
- 
 const { Check, ChevronRight, Calendar, Download, ArrowRight, AlertCircle, CheckCircle } = Icons;
 
 const PRIMARY = "#111111";

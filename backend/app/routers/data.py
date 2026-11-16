@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Event, Patient, Persona, User
+from app.models import Event, Note, Patient, Persona, User
 from app.notice import with_notice
 from app.pdf import render_pdf
 from app.sessions import CurrentUser, require_staff
@@ -58,19 +58,53 @@ def _my_patient(db: Session, user: User) -> Patient | None:
 def _timeline_items(db: Session, patient: Patient | None) -> list[dict[str, Any]]:
     if patient is None:
         return []
-    rows = db.execute(
-        select(Event).where(Event.patient_id == patient.id).order_by(Event.event_time)
-    ).scalars()
-    return [
-        {
-            "event_id": row.id,
-            "item_time": _iso(row.event_time),
-            "event_type": row.event_type,
-            "display": row.display,
-            "source_type": row.source_type,
+    rows = list(
+        db.execute(
+            select(Event).where(Event.patient_id == patient.id).order_by(Event.event_time)
+        ).scalars()
+    )
+    refs = {row.source_ref for row in rows if row.source_ref}
+    notes: dict[str, Note] = {}
+    if refs:
+        notes = {
+            note.source_ref: note
+            for note in db.execute(
+                select(Note).where(Note.patient_id == patient.id, Note.source_ref.in_(refs))
+            ).scalars()
         }
-        for row in rows
-    ]
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        # The note `source_ref` points at, when there is one: provenance is
+        # followed on the read, so a screen shows the text behind an item
+        # rather than asserting it unsourced (AC-006).
+        note = notes.get(row.source_ref or "")
+        items.append(
+            {
+                "id": row.id,
+                "patient_id": row.patient_id,
+                "event_id": row.source_event_id,
+                "source_event_id": row.source_event_id,
+                "item_time": _iso(row.event_time),
+                "event_time": _iso(row.event_time),
+                "event_type": row.event_type,
+                "code_system": row.code_system,
+                "code": row.code,
+                "display": row.display,
+                "value": row.value,
+                "unit": row.unit,
+                "provider_org": row.provider_org,
+                "provider_specialty": row.provider_specialty,
+                "source_type": row.source_type,
+                "source_ref": row.source_ref,
+                "encounter_ref": row.encounter_ref,
+                "confidence": row.confidence,
+                "dataset_version": row.dataset_version,
+                "note_text": note.text if note else None,
+                "note_type": note.note_type if note else None,
+                "note_time": _iso(note.note_time) if note else None,
+            }
+        )
+    return items
 
 
 @router.get("/api/worklist")
@@ -203,6 +237,17 @@ def persona_replay(persona_key: str, user: CurrentUser, db: Db) -> dict[str, Any
             "tracks": {"real_world": bundle["items"], "copilot": bundle["items"]},
         }
     )
+
+
+@router.get("/api/cases/{patient_id}/timeline")
+def case_timeline(patient_id: str, user: Staff, db: Db) -> dict[str, Any]:
+    """One patient's stored events, each with its provenance and note text."""
+    patient = db.get(Patient, patient_id)
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"no patient {patient_id}"
+        )
+    return with_notice({"patient_id": patient.id, "items": _timeline_items(db, patient)})
 
 
 @router.get("/api/evaluation/runs/latest")

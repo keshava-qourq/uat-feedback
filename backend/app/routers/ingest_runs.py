@@ -66,6 +66,10 @@ def _report(db: Session, run: IngestRun) -> dict[str, Any]:
             "status": row.status,
             "rows_loaded": row.rows_loaded or 0,
             "rows_rejected": row.rows_rejected or 0,
+            # How many of those rejections were provenance failures: a row
+            # with no source_type/source_ref, or a source_type outside
+            # ehr|claim|patient (AC-007).
+            "provenance_failures": row.provenance_failures or 0,
             # A failure always carries its reason: the file and the column or
             # field behind it, never a silently empty line.
             "error": row.error_detail,
@@ -81,7 +85,23 @@ def _report(db: Session, run: IngestRun) -> dict[str, Any]:
         "started_at": _iso(run.started_at),
         "finished_at": _iso(run.finished_at),
     }
-    return {**run_body, "run": run_body, "files": files}
+    # The provenance failures of this run, per file: how many rows had no
+    # usable source_type/source_ref and the detail naming them (AC-007).
+    provenance_failures = [
+        {
+            "file": line["file"],
+            "count": line["provenance_failures"],
+            "detail": line["error"],
+        }
+        for line in files
+        if line["provenance_failures"]
+    ]
+    return {
+        **run_body,
+        "run": run_body,
+        "files": files,
+        "provenance_failures": provenance_failures,
+    }
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)

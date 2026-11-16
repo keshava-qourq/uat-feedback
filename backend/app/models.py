@@ -142,6 +142,8 @@ class Event(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     patient_id: Mapped[str] = mapped_column(String, ForeignKey("patients.id"), nullable=False)
     source_event_id: Mapped[str] = mapped_column(String)
+    # `event_id` is the source file's column name; the stored column keeps the
+    # unambiguous `source_event_id`, so a reader of either name finds it.
     event_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     event_type: Mapped[str] = mapped_column(String)
     code_system: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -152,7 +154,7 @@ class Event(Base):
     provider_org: Mapped[str | None] = mapped_column(String, nullable=True)
     provider_specialty: Mapped[str | None] = mapped_column(String, nullable=True)
     source_type: Mapped[str] = mapped_column(String)  # "ehr" | "claim" | "patient"
-    source_ref: Mapped[str] = mapped_column(String)
+    source_ref: Mapped[str] = mapped_column(String, index=True)
     encounter_ref: Mapped[str | None] = mapped_column(String, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     dataset_version: Mapped[str] = mapped_column(String)
@@ -166,7 +168,7 @@ class Note(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     patient_id: Mapped[str] = mapped_column(String, ForeignKey("patients.id"), nullable=False)
-    source_ref: Mapped[str] = mapped_column(String)
+    source_ref: Mapped[str] = mapped_column(String, index=True)
     note_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     note_type: Mapped[str] = mapped_column(String)  # "clinic_note" | "imaging_report"
     text: Mapped[str] = mapped_column(Text)
@@ -262,6 +264,8 @@ class IngestFileResult(Base):
     status: Mapped[str] = mapped_column(String)  # "pass" | "fail"
     rows_loaded: Mapped[int] = mapped_column(Integer, default=0)
     rows_rejected: Mapped[int] = mapped_column(Integer, default=0)
+    #: Rejections whose cause was missing or invalid provenance (AC-007).
+    provenance_failures: Mapped[int] = mapped_column(Integer, default=0)
     error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
