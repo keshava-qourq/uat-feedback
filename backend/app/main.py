@@ -19,7 +19,7 @@ from app.bootstrap import seed_bootstrap_accounts
 from app.config import allowed_origins
 from app.database import Base, SessionLocal, engine
 from app.pack import active_pack_status, log_active_pack
-from app.routers import admin, auth, data, ingest_runs, pack
+from app.routers import admin, auth, data, ingest_runs, invites, pack
 from app.services import configured_services
 
 
@@ -97,6 +97,7 @@ app.include_router(data.router)
 app.include_router(ingest_runs.router)
 app.include_router(admin.router)
 app.include_router(pack.router)
+app.include_router(invites.router)
 
 
 @app.get("/health")

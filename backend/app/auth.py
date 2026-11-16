@@ -88,6 +88,12 @@ OPEN_PATHS = frozenset(
 )
 
 
+#: Opening and accepting an invite are unauthenticated: the opaque token in the
+#: path is itself the credential (US-026). Issuing one -- `/api/invites` with no
+#: trailing segment -- is not in here and still needs a staff session.
+OPEN_INVITE_PREFIX = "/api/invites/"
+
+
 def is_authenticated_request(path: str, authorization: str | None) -> bool:
     """Whether a request may proceed past the gate (AC-146).
 
@@ -95,7 +101,7 @@ def is_authenticated_request(path: str, authorization: str | None) -> bool:
     `API_SECRET_KEY` passes outright, and any other bearer is left to the
     route's own session check, which 401s when it is not a live session.
     """
-    if path in OPEN_PATHS:
+    if path in OPEN_PATHS or path.startswith(OPEN_INVITE_PREFIX):
         return True
     scheme, _, token = (authorization or "").partition(" ")
     return scheme.lower() == "bearer" and bool(token.strip())

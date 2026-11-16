@@ -38,6 +38,7 @@ __all__ = [
     "User",
     "SessionRow",
     "PasswordSetToken",
+    "Invite",
     "Decision",
     "Patient",
     "Event",
@@ -128,6 +129,35 @@ class PasswordSetToken(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Invite(Base):
+    """One single-use patient invite link, scoped to exactly one patient.
+
+    The opaque token exists in plaintext only in the link handed to the
+    clinician once; the row keeps its salted hash, so no endpoint can recover
+    or list a live token (NFR-009). The invite grants the patient role and
+    nothing else, and is refused identically once consumed, revoked or past
+    `expires_at`.
+    """
+
+    __tablename__ = "invites"
+    __table_args__ = (Index("ix_invites_patient_id_created_at", "patient_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    patient_id: Mapped[str] = mapped_column(String, ForeignKey("patients.id"), nullable=False)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)
+    token_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
+    # The role this invite grants: patient, always (NFR-009).
+    granted_role: Mapped[str] = mapped_column(String, default="patient")
+    created_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

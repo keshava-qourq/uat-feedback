@@ -6,6 +6,8 @@ import * as UI from "@/lib/ui";
 import { Icons } from "@/lib/icons";
 import { brand } from "@/lib/brand";
 import { useNavigate } from "@/lib/navigate";
+import { ApiError, apiFetch } from "@/lib/api";
+import InvitePatientDialog from "@/components/InvitePatientDialog";
 
 const { Table, THead, TBody, TR, TH, TD, Empty } = UI;
 
@@ -14,13 +16,14 @@ const { Filter } = Icons;
 const TIER_ORDER = { High: 0, Moderate: 1, "Insufficient history": 2, Low: 3 };
 const FILTERS = ["All", "High", "Moderate", "Insufficient history", "Low"];
 
+// AC-085: the four invite_status values the worklist contract returns. "none" has no
+// label at all -- the row shows no invite badge.
 const INVITE_LABEL = {
-  none: "Not invited",
-  sent: "Not yet opened",
+  not_yet_opened: "Not yet opened",
   opened: "Opened",
-  done: "Intake completed",
+  intake_completed: "Intake completed",
 };
-const INVITE_GLYPH = { none: "–", sent: "○", opened: "◐", done: "●" };
+const INVITE_GLYPH = { not_yet_opened: "○", opened: "◐", intake_completed: "●" };
 
 const PATIENTS = [
   {
@@ -169,9 +172,40 @@ export default function Screen() {
   const surface = `color-mix(in srgb, ${BG} 45%, white)`;
   const spacing = 16;
 
-  const [patients, setPatients] = React.useState(PATIENTS);
   const [filter, setFilter] = React.useState("All");
-  const [issued, setIssued] = React.useState(null);
+  const [items, setItems] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState("");
+
+  // AC-085: patient name and invite status come from GET /api/worklist. The other
+  // columns (tier, reason, reachable history, decision) are still the approved sample
+  // copy -- the contract does not carry them yet.
+  const load = React.useCallback(async () => {
+    try {
+      const data = await apiFetch("/api/worklist");
+      setItems(Array.isArray(data?.items) ? data.items : []);
+      setLoadError("");
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not load the worklist.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  const patients = React.useMemo(
+    () =>
+      items.map((item, i) => ({
+        ...PATIENTS[i % PATIENTS.length],
+        id: item.patient_id,
+        name: item.display_name,
+        invite: item.invite_status,
+      })),
+    [items],
+  );
 
   const counts = React.useMemo(() => {
     const c = { All: patients.length };
@@ -182,18 +216,9 @@ export default function Screen() {
   }, [patients]);
 
   const rows = filter === "All" ? patients : patients.filter((p) => p.tier === filter);
-  const nextToInvite = patients.find((p) => p.invite === "none");
 
   const openCase = (p) =>
     navigate(p.tier === "Insufficient history" ? "insufficient-history" : "case-summary");
-
-  const sendInvite = () => {
-    if (!nextToInvite) return;
-    setPatients((list) =>
-      list.map((p) => (p.id === nextToInvite.id ? { ...p, invite: "sent" } : p)),
-    );
-    setIssued({ id: nextToInvite.id, name: nextToInvite.name });
-  };
 
   const fontHead = {
     fontFamily: brand.fontHeading,
@@ -349,39 +374,8 @@ export default function Screen() {
             </p>
           </div>
           <div className="col-span-12 md:col-span-4 flex flex-col md:items-end gap-2">
-            <button
-              type="button"
-              data-wf="b-0-1"
-              onClick={sendInvite}
-              disabled={!nextToInvite}
-              className="wl-btn wl-focus inline-flex items-center justify-center gap-3"
-              style={{
-                backgroundColor: P,
-                color: A,
-                border: `1px solid ${A}`,
-                outline: `1px solid ${P}`,
-                outlineOffset: 3,
-                minHeight: 48,
-                padding: "0 24px",
-                fontSize: 13,
-                fontWeight: 700,
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-                borderRadius: 0,
-                margin: 4,
-              }}
-            >
-              <Icons.ArrowRight className="w-4 h-4" aria-hidden="true" />
-              Invite patient
-            </button>
             <p style={{ fontSize: 12, color: soft, margin: 0 }} className="md:text-right">
-              {nextToInvite ? (
-                <>
-                  Next without an invite: <strong style={{ color: P }}>{nextToInvite.name}</strong>
-                </>
-              ) : (
-                "Every patient on this list already has an invite."
-              )}
+              Invite a patient from their own row below.
             </p>
           </div>
         </div>
@@ -395,47 +389,19 @@ export default function Screen() {
           100% synthetic data · Not for clinical use
         </p>
 
-        {issued && (
-          <div
-            role="status"
-            className="wl-enter mt-6"
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setIssued(null);
-            }}
-            style={{
-              border: `1px solid ${A}`,
-              outline: `1px solid ${P}`,
-              outlineOffset: 4,
-              margin: "24px 4px 0",
-              padding: 16,
-              backgroundColor: surface,
-            }}
+        {loadError && (
+          <p
+            role="alert"
+            className="mt-4"
+            style={{ fontSize: 14, fontWeight: 600, color: "#b91c1c" }}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 style={{ ...fontHead, fontSize: 16, margin: 0, fontWeight: 700 }}>
-                  Invite ready for {issued.name}
-                </h2>
-                <p style={{ fontSize: 14, lineHeight: 1.5, margin: "8px 0 8px" }}>
-                  Send this link yourself. It works once, expires on 21 Nov 2026, and opens only{" "}
-                  {issued.name.split(" ")[0]}’s own story.
-                </p>
-                <code
-                  style={{
-                    fontFamily: "ui-monospace, Menlo, monospace",
-                    fontSize: 13,
-                    padding: "8px 12px",
-                    border: `1px solid ${hair}`,
-                    display: "inline-block",
-                    wordBreak: "break-all",
-                    backgroundColor: BG,
-                  }}
-                >
-                  https://odyssey-copilot.example/invite/&lt;single-use-token&gt;
-                </code>
-              </div>
-            </div>
-          </div>
+            {loadError}
+          </p>
+        )}
+        {loading && !loadError && (
+          <p role="status" className="mt-4" style={{ fontSize: 14, color: soft }}>
+            Loading the worklist…
+          </p>
         )}
 
         {/* Row 2 */}
@@ -589,6 +555,9 @@ export default function Screen() {
                       <TH data-wf="i-2-0-5" scope="col" style={th}>
                         Invite status
                       </TH>
+                      <TH scope="col" style={th}>
+                        Invite
+                      </TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -597,9 +566,7 @@ export default function Screen() {
                       return (
                         <TR
                           key={p.id}
-                          className={
-                            "wl-row wl-enter" + (issued && issued.id === p.id ? " wl-flash" : "")
-                          }
+                          className="wl-row wl-enter"
                           onClick={() => openCase(p)}
                           style={{
                             cursor: "pointer",
@@ -659,12 +626,24 @@ export default function Screen() {
                             )}
                           </TD>
                           <TD style={{ ...td, whiteSpace: "nowrap" }}>
-                            <span aria-hidden="true" style={{ display: "inline-block", width: 16 }}>
-                              {INVITE_GLYPH[p.invite]}
-                            </span>
-                            <span style={{ color: p.invite === "none" ? soft : P }}>
-                              {INVITE_LABEL[p.invite]}
-                            </span>
+                            {INVITE_LABEL[p.invite] ? (
+                              <span data-testid={`invite-status-${p.id}`}>
+                                <span
+                                  aria-hidden="true"
+                                  style={{ display: "inline-block", width: 16 }}
+                                >
+                                  {INVITE_GLYPH[p.invite]}
+                                </span>
+                                <span style={{ color: P }}>{INVITE_LABEL[p.invite]}</span>
+                              </span>
+                            ) : null}
+                          </TD>
+                          <TD style={td} onClick={(e) => e.stopPropagation()}>
+                            <InvitePatientDialog
+                              patientId={p.id}
+                              patientName={p.name}
+                              onIssued={load}
+                            />
                           </TD>
                         </TR>
                       );

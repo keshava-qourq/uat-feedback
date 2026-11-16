@@ -12,6 +12,7 @@ scoring each screen eventually shows belongs to its own ticket.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -20,8 +21,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Decision, Event, Note, Patient, Persona, User
+from app.invites import worklist_invite_status
+from app.models import Decision, Event, IntakeAnswer, Note, Patient, Persona, User
 from app.notice import with_notice
+from app.pack import get_active_pack
 from app.pdf import render_pdf
 from app.sessions import CurrentUser, require_staff
 
@@ -117,6 +120,9 @@ def worklist(user: Staff, db: Db) -> dict[str, Any]:
                     "patient_id": patient.id,
                     "display_name": patient.display_name,
                     "dataset_patient_id": patient.dataset_patient_id,
+                    # AC-085: none until an invite is issued, then not_yet_opened,
+                    # opened once the link is fetched, intake_completed after intake.
+                    "invite_status": worklist_invite_status(db, patient.id),
                 }
                 for patient in _patients(db)
             ]
@@ -177,6 +183,78 @@ def my_timeline(user: CurrentUser, db: Db) -> dict[str, Any]:
             "items": _timeline_items(db, patient),
         }
     )
+
+
+#: The question the intake asks when no condition pack is active: the pack owns
+#: every condition-specific question key (NFR-019), and with no pack the intake
+#: still has to be completable.
+GENERIC_INTAKE_KEYS = ["general_history"]
+
+
+def _intake_questions() -> list[dict[str, str]]:
+    """The intake's questions: the active pack's keys, else the generic one."""
+    pack = get_active_pack()
+    keys: list[str] = []
+    if pack is not None:
+        for signal in pack.signals().values():
+            for key in (signal or {}).get("intake_keys") or []:
+                if key not in keys:
+                    keys.append(key)
+    return [{"key": key} for key in (keys or GENERIC_INTAKE_KEYS)]
+
+
+def _answered_keys(db: Session, patient_id: str) -> set[str]:
+    return set(
+        db.execute(
+            select(IntakeAnswer.question_key).where(IntakeAnswer.patient_id == patient_id)
+        ).scalars()
+    )
+
+
+@router.get("/api/patients/me/intake")
+def my_intake(user: CurrentUser, db: Db) -> dict[str, Any]:
+    """AC-085: what the invited patient still has to answer."""
+    patient = _my_patient(db, user)
+    questions = _intake_questions()
+    answered = _answered_keys(db, patient.id) if patient else set()
+    pending = [question for question in questions if question["key"] not in answered]
+    return with_notice(
+        {
+            "patient_id": patient.id if patient else None,
+            "questions": questions,
+            "next_question": pending[0] if pending else None,
+            "complete": not pending,
+        }
+    )
+
+
+class IntakeAnswerBody(BaseModel):
+    question_key: str
+    answer_value: Any = None
+
+
+@router.post("/api/patients/me/intake/answers")
+def record_intake_answer(body: IntakeAnswerBody, user: CurrentUser, db: Db) -> dict[str, Any]:
+    """Store one intake answer; the last one marks the intake complete (AC-085)."""
+    patient = _my_patient(db, user)
+    if patient is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    keys = [question["key"] for question in _intake_questions()]
+    if body.question_key not in keys:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    answered = _answered_keys(db, patient.id) | {body.question_key}
+    complete = all(key in answered for key in keys)
+    db.add(
+        IntakeAnswer(
+            patient_id=patient.id,
+            question_key=body.question_key,
+            answer_value=body.answer_value,
+            answered_at=datetime.now(UTC),
+            is_complete=complete,
+        )
+    )
+    db.commit()
+    return with_notice({"patient_id": patient.id, "complete": complete})
 
 
 @router.get("/api/patients/me/updates")
