@@ -5,7 +5,7 @@
 <!-- sdlc:auto:start overview -->
 PRD: Diagnostic Odyssey Copilot — axSpA Proof of Concept
 
-**Documentation version:** v9
+**Documentation version:** v10
 <!-- sdlc:auto:end overview -->
 
 ## Contents
@@ -30,7 +30,7 @@ PRD: Diagnostic Odyssey Copilot — axSpA Proof of Concept
 | [Tests](testing/test-cases.md) | 131 tests |
 | [Deployment guide](deployment/deployment-guide.md) | deployed |
 | [Runbook](deployment/runbook.md) | deployed |
-| [Release notes](deployment/release-notes.md) | 5 releases |
+| [Release notes](deployment/release-notes.md) | 6 releases |
 | [Traceability matrix](traceability-matrix.md) | 44 requirements |
-| [Changelog](CHANGELOG.md) | 9 versions |
+| [Changelog](CHANGELOG.md) | 10 versions |
 <!-- sdlc:auto:end contents -->

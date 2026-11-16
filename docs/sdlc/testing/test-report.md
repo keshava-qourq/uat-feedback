@@ -17,6 +17,10 @@ _No E2E run yet._
 <!-- sdlc:auto:end unit -->
 
 <!-- sdlc:auto:start dev-checks -->
+### Sprint 2
+
+_No test steps recorded._
+
 ### Sprint 1
 
 | Step | Status | Ticket | Finished |
