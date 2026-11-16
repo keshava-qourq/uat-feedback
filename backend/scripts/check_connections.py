@@ -274,12 +274,8 @@ def check_bucket(needs_endpoint):
         config=config,
         **keys,
     )
-    # ExpectedBucketOwner, when the owning account is configured, makes the call fail
-    # rather than reach a bucket of that name owned by someone else.
-    owner = setting("S3_EXPECTED_BUCKET_OWNER")
-    guard = {"ExpectedBucketOwner": owner} if owner else {}
     try:
-        client.head_bucket(Bucket=bucket, **guard)
+        client.head_bucket(Bucket=bucket)
     except NoCredentialsError:
         return False, "no AWS credentials found"
     except ClientError as exc:
