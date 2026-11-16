@@ -37,6 +37,8 @@ __all__ = [
     "Base",
     "User",
     "SessionRow",
+    "PasswordSetToken",
+    "Decision",
     "Patient",
     "Event",
     "Note",
@@ -106,6 +108,50 @@ class SessionRow(Base):
     )
     idle_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PasswordSetToken(Base):
+    """One first-sign-in (or reset) link: stored hashed, expiring, single-use.
+
+    The plaintext token exists only in the link that was mailed; the row keeps
+    its salted hash, so no endpoint can recover or re-display a live token.
+    """
+
+    __tablename__ = "password_set_tokens"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    # A plain string, not an FK: `users` is created by `create_all`, not by a
+    # migration -- the same reason `Patient.assigned_clinician_id` is one.
+    user_id: Mapped[str] = mapped_column(String, index=True)
+    token_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Decision(Base):
+    """A clinician's agree / disagree / need-more-info on a case.
+
+    `clinician_id` always comes from the verified session, never from the
+    request body, so every decision is attributable to the signed-in account.
+    """
+
+    __tablename__ = "decisions"
+    __table_args__ = (Index("ix_decisions_patient_id_created_at", "patient_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    patient_id: Mapped[str] = mapped_column(String, ForeignKey("patients.id"), nullable=False)
+    clinician_id: Mapped[str] = mapped_column(String, nullable=False)
+    decision: Mapped[str] = mapped_column(String)  # agree | disagree | need_more_info
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tier_at_time: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    superseded_by: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class Patient(Base):

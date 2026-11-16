@@ -49,6 +49,49 @@ export function clearSessionToken(): void {
   }
 }
 
+/** Thrown by apiFetch for any non-2xx response, carrying the API's {"detail"}. */
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(status: number, detail: string) {
+    super(detail);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+// AC-102/AC-103: a 401 on an authenticated call ends the session everywhere in the SPA.
+// api.ts cannot route (it is not a component), so it clears the token, remembers why,
+// and announces it; App listens and redirects to /sign-in.
+export const SESSION_EXPIRED_EVENT = "session-expired";
+export const SESSION_EXPIRED_MESSAGE = "Your session expired, please sign in again.";
+
+// The two unauthenticated endpoints: a 401 from login is "invalid credentials", not an
+// expiry, and must not bounce the user or clear anything.
+const UNAUTHENTICATED_PATHS = ["/api/auth/login", "/api/auth/set-password"];
+
+let sessionExpired = false;
+
+/** Reads and clears the "your session expired" flag, so the message shows once. */
+export function takeSessionExpired(): boolean {
+  const was = sessionExpired;
+  sessionExpired = false;
+  return was;
+}
+
+async function detailOf(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: unknown };
+    if (typeof body?.detail === "string") return body.detail;
+    if (Array.isArray(body?.detail)) {
+      const first = body.detail[0] as { msg?: string } | undefined;
+      if (first?.msg) return first.msg;
+    }
+  } catch {
+    // Not JSON: fall through to the generic message.
+  }
+  return fallback;
+}
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const bearer = getSessionToken() ?? API_SECRET_KEY;
   // Join with exactly one slash: API_BASE_URL is baked with a trailing slash (the API
@@ -63,7 +106,16 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     },
   });
   if (!response.ok) {
-    throw new Error(`${init?.method ?? "GET"} ${path} failed: ${response.status}`);
+    const detail = await detailOf(
+      response,
+      `${init?.method ?? "GET"} ${path} failed: ${response.status}`,
+    );
+    if (response.status === 401 && !UNAUTHENTICATED_PATHS.includes(path)) {
+      clearSessionToken();
+      sessionExpired = true;
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
+    throw new ApiError(response.status, detail);
   }
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }

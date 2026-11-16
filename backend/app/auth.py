@@ -82,6 +82,8 @@ OPEN_PATHS = frozenset(
         "/docs/oauth2-redirect",
         "/redoc",
         "/api/auth/login",
+        # The set-password token is itself the credential (AC-104).
+        "/api/auth/set-password",
     }
 )
 

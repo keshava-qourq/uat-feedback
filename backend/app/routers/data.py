@@ -12,7 +12,7 @@ scoring each screen eventually shows belongs to its own ticket.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Event, Note, Patient, Persona, User
+from app.models import Decision, Event, Note, Patient, Persona, User
 from app.notice import with_notice
 from app.pdf import render_pdf
 from app.sessions import CurrentUser, require_staff
@@ -122,6 +122,50 @@ def worklist(user: Staff, db: Db) -> dict[str, Any]:
             ]
         }
     )
+
+
+class DecisionBody(BaseModel):
+    """What a clinician records on a case. The acting account is never in here."""
+
+    decision: Literal["agree", "disagree", "need_more_info"]
+    reason: str | None = None
+    tier_at_time: str | None = None
+
+
+@router.post("/api/cases/{patient_id}/decisions", status_code=status.HTTP_201_CREATED)
+def record_decision(patient_id: str, body: DecisionBody, user: Staff, db: Db) -> dict[str, Any]:
+    """AC-100: the decision stores the acting user_id from the verified session."""
+    patient = db.get(Patient, patient_id)
+    if patient is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    previous = (
+        db.execute(
+            select(Decision)
+            .where(Decision.patient_id == patient_id, Decision.superseded_by.is_(None))
+            .order_by(Decision.created_at.desc())
+        )
+        .scalars()
+        .first()
+    )
+    row = Decision(
+        patient_id=patient_id,
+        clinician_id=user.id,
+        decision=body.decision,
+        reason=body.reason,
+        tier_at_time=body.tier_at_time,
+    )
+    db.add(row)
+    db.flush()
+    if previous is not None:
+        previous.superseded_by = row.id
+    db.commit()
+    return {
+        "decision_id": row.id,
+        "clinician_id": row.clinician_id,
+        "decision": row.decision,
+        "created_at": _iso(row.created_at),
+        "supersedes": previous.id if previous is not None else None,
+    }
 
 
 @router.get("/api/patients/me/timeline")
