@@ -59,6 +59,19 @@ def require_api_access(
     require_staff(current_user(bearer_token(authorization), db))
 
 
+def require_admin(
+    authorization: str | None = Header(default=None),
+    db: Annotated[Session, Depends(get_db)] = None,  # type: ignore[assignment]
+):
+    """The signed-in administrator. 401 without a live session, 403 for any other role."""
+    from app.sessions import bearer_token, current_user
+
+    user = current_user(bearer_token(authorization), db)
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
+    return user
+
+
 #: Paths reachable with no credentials at all: liveness, the OpenAPI document
 #: the SPA's tooling reads, and the sign-in route that issues a token.
 OPEN_PATHS = frozenset(
@@ -69,8 +82,16 @@ OPEN_PATHS = frozenset(
         "/docs/oauth2-redirect",
         "/redoc",
         "/api/auth/login",
+        # The set-password token is itself the credential (AC-104).
+        "/api/auth/set-password",
     }
 )
+
+
+#: Opening and accepting an invite are unauthenticated: the opaque token in the
+#: path is itself the credential (US-026). Issuing one -- `/api/invites` with no
+#: trailing segment -- is not in here and still needs a staff session.
+OPEN_INVITE_PREFIX = "/api/invites/"
 
 
 def is_authenticated_request(path: str, authorization: str | None) -> bool:
@@ -80,7 +101,7 @@ def is_authenticated_request(path: str, authorization: str | None) -> bool:
     `API_SECRET_KEY` passes outright, and any other bearer is left to the
     route's own session check, which 401s when it is not a live session.
     """
-    if path in OPEN_PATHS:
+    if path in OPEN_PATHS or path.startswith(OPEN_INVITE_PREFIX):
         return True
     scheme, _, token = (authorization or "").partition(" ")
     return scheme.lower() == "bearer" and bool(token.strip())

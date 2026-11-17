@@ -15,6 +15,13 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir --only-binary :all: -r requirements.txt
 
 COPY app ./app
+# The schema is only ever changed through a migration (the architecture's rule),
+# so the migrations and their config have to be in the image: without them
+# `alembic upgrade head` cannot be run against the deployed database, and the
+# worker container -- which runs this same image -- could not be brought up
+# against a fresh one either.
+COPY alembic.ini ./alembic.ini
+COPY alembic ./alembic
 
 # Run as an unprivileged user. The service never needs root, and a container that
 # drops it limits what a compromise of the app can do to the host.

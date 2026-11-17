@@ -16,5 +16,14 @@
     "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src"]
+  // The Playwright specs are typechecked alongside the app: an e2e spec that does
+  // not compile is then found by `npm run typecheck`, not minutes into a browser
+  // run. `@types/node` is what gives `process.env` its type in them.
+  //
+  // vite.config.ts and playwright.config.ts stay out on purpose. Vitest 2.1 ships
+  // its own nested copy of Vite 5, so a config file typechecked here is compared
+  // against two different `Plugin` types and fails on an entirely correct file.
+  // Both are validated by the tools that read them -- `vitest run` and
+  // `playwright test` -- every time the suites run.
+  "include": ["src", "e2e"]
 }

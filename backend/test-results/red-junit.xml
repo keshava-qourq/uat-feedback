@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="6.521" timestamp="2026-11-16T18:10:03.587555+00:00" hostname="7cca21f5b9f5"><testcase classname="tests.integration.test_provenance" name="test_ac005_every_stored_event_the_api_exposes_carries_all_sixteen_provenance_fields" time="2.682"><failure message="AssertionError: no route exposed any of the events just ingested, so provenance on a stored event cannot be inspected; routes read: ['/api/demo/personas/prov-ada-9404897a/replay', '/api/patients/me/timeline', '/api/patients/me/updates', '/api/worklist', 'POST /api/demo/personas/prov-ada-9404897a/open']&#10;assert []">api = &lt;starlette.testclient.TestClient object at 0x7f26fd90f740&gt;
+
+    def test_ac005_every_stored_event_the_api_exposes_carries_all_sixteen_provenance_fields(
+        api: TestClient,
+    ) -&gt; None:
+        """AC-005: after ingesting events.csv, every stored event the API hands out
+        carries patient_id, event_id, event_time, event_type, code_system, code,
+        display, value, unit, provider_org, provider_specialty, source_type,
+        source_ref, encounter_ref and confidence -- plus the load it came from."""
+        headers = admin_headers(api)
+        drop = ProvenanceDrop(uuid.uuid4().hex[:8])
+        report, version = _ingest(api, headers, drop)
+        assert str(report["run"]["status"]).lower() in {"succeeded", "success", "completed"}, (
+            f"the fixture drop did not ingest cleanly: {report['run']}"
+        )
+    
+        payloads = _read_payloads(api, headers, drop)
+        events = _event_objects(payloads, drop)
+&gt;       assert events, (
+            "no route exposed any of the events just ingested, so provenance on a stored "
+            f"event cannot be inspected; routes read: {sorted(payloads)}"
+        )
+E       AssertionError: no route exposed any of the events just ingested, so provenance on a stored event cannot be inspected; routes read: ['/api/demo/personas/prov-ada-9404897a/replay', '/api/patients/me/timeline', '/api/patients/me/updates', '/api/worklist', 'POST /api/demo/personas/prov-ada-9404897a/open']
+E       assert []
+
+tests/integration/test_provenance.py:198: AssertionError</failure></testcase><testcase classname="tests.integration.test_provenance" name="test_ac006_an_event_source_ref_resolves_to_the_matching_note_text" time="1.844"><failure message="AssertionError: following these event source_refs did not retrieve the matching notes.csv text through any read route: ['ehr:note:a41907f2:1', 'patient:note:a41907f2:2']; routes read: ['/api/demo/personas/prov-ada-a41907f2/replay', '/api/patients/me/timeline', '/api/patients/me/updates', '/api/worklist', 'POST /api/demo/personas/prov-ada-a41907f2/open']&#10;assert not ['ehr:note:a41907f2:1', 'patient:note:a41907f2:2']">api = &lt;starlette.testclient.TestClient object at 0x7f26fd90f740&gt;
+
+    def test_ac006_an_event_source_ref_resolves_to_the_matching_note_text(api: TestClient) -&gt; None:
+        """AC-006: an event whose source_type is ehr or patient and whose source_ref
+        points at a note resolves, through the API, to that note's text in notes.csv
+        -- source_ref is the provenance join key."""
+        headers = admin_headers(api)
+        drop = ProvenanceDrop(uuid.uuid4().hex[:8])
+        report, _version = _ingest(api, headers, drop)
+        assert str(report["run"]["status"]).lower() in {"succeeded", "success", "completed"}, (
+            f"the fixture drop did not ingest cleanly: {report['run']}"
+        )
+    
+        payloads = _read_payloads(api, headers, drop)
+        unresolved: list[str] = []
+        for source_ref, text in drop.note_texts.items():
+            resolved = any(
+                source_ref in _strings(obj) and text in _strings(obj)
+                for payload in payloads.values()
+                for obj in _objects(payload)
+            )
+            if not resolved:
+                unresolved.append(source_ref)
+&gt;       assert not unresolved, (
+            "following these event source_refs did not retrieve the matching notes.csv "
+            f"text through any read route: {unresolved}; routes read: {sorted(payloads)}"
+        )
+E       AssertionError: following these event source_refs did not retrieve the matching notes.csv text through any read route: ['ehr:note:a41907f2:1', 'patient:note:a41907f2:2']; routes read: ['/api/demo/personas/prov-ada-a41907f2/replay', '/api/patients/me/timeline', '/api/patients/me/updates', '/api/worklist', 'POST /api/demo/personas/prov-ada-a41907f2/open']
+E       assert not ['ehr:note:a41907f2:1', 'patient:note:a41907f2:2']
+
+tests/integration/test_provenance.py:265: AssertionError</failure></testcase><testcase classname="tests.integration.test_provenance" name="test_ac007_rows_missing_source_ref_or_source_type_fail_provenance_and_are_not_retrievable" time="1.840"><failure message="AssertionError: the ingest report carries no provenance_failures section: ['dataset_version', 'files', 'finished_at', 'patient_count', 'run', 'run_id', 'seed', 'started_at', 'status']&#10;assert None is not None">api = &lt;starlette.testclient.TestClient object at 0x7f26fd90f740&gt;
+
+    def test_ac007_rows_missing_source_ref_or_source_type_fail_provenance_and_are_not_retrievable(
+        api: TestClient,
+    ) -&gt; None:
+        """AC-007: an events.csv with one row missing source_ref and one missing
+        source_type reports both as provenance failures in the ingest report, and
+        neither row is retrievable from any read route."""
+        headers = admin_headers(api)
+        drop = ProvenanceDrop(uuid.uuid4().hex[:8], with_bad_rows=True)
+        report, _version = _ingest(api, headers, drop)
+    
+        # The report names the provenance failures, per the ingest-report contract.
+        failures = report.get("provenance_failures")
+&gt;       assert failures is not None, (
+            f"the ingest report carries no provenance_failures section: {sorted(report)}"
+        )
+E       AssertionError: the ingest report carries no provenance_failures section: ['dataset_version', 'files', 'finished_at', 'patient_count', 'run', 'run_id', 'seed', 'started_at', 'status']
+E       assert None is not None
+
+tests/integration/test_provenance.py:286: AssertionError</failure></testcase></testsuite></testsuites>

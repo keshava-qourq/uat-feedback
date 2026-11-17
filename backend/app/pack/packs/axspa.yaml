@@ -1,0 +1,204 @@
+# The axSpA condition pack: every clinical constant, as data.
+#
+# Nothing in this file is interpreted by name anywhere in the application --
+# the loader reads sections, keys and values generically -- so changing a code
+# list, a threshold or a sentence here needs no code deployment (NFR-019).
+pack_key: axspa
+version: 1
+display_name: Axial spondyloarthritis
+
+code_lists:
+  back_pain:
+    system: ICD-10
+    codes: ["M54.5", "M54.50", "M54.9", "M545"]
+  sacroiliitis_imaging:
+    system: ICD-10
+    codes: ["M46.1", "M45.9"]
+  uveitis:
+    system: ICD-10
+    codes: ["H20.0", "H20.00"]
+  psoriasis:
+    system: ICD-10
+    codes: ["L40.0", "L40.9"]
+  inflammatory_bowel_disease:
+    system: ICD-10
+    codes: ["K50.90", "K51.90"]
+  enthesitis:
+    system: ICD-10
+    codes: ["M77.9", "M76.60"]
+  hla_b27_test:
+    system: LOINC
+    codes: ["17695-9"]
+  crp_test:
+    system: LOINC
+    codes: ["1988-5"]
+  esr_test:
+    system: LOINC
+    codes: ["4537-7"]
+  nsaid_therapy:
+    system: ATC
+    codes: ["M01AE01", "M01AB05", "M01AH01"]
+  mri_si_joints:
+    system: CPT
+    codes: ["72195", "72196"]
+  xray_si_joints:
+    system: CPT
+    codes: ["72170", "72200"]
+  mechanical_back_pain:
+    system: ICD-10
+    codes: ["M54.4", "M51.26", "S33.5XXA"]
+  fibromyalgia:
+    system: ICD-10
+    codes: ["M79.7"]
+
+signals:
+  chronic_back_pain:
+    label: Chronic back pain for three months or more
+    code_lists: [back_pain]
+    min_occurrences: 2
+  onset_before_45:
+    label: Back pain beginning before age 45
+    intake_keys: [age_at_onset]
+  inflammatory_back_pain:
+    label: Inflammatory pattern back pain
+    intake_keys: [night_pain, morning_stiffness, better_with_movement]
+  hla_b27_positive:
+    label: HLA-B27 positive
+    code_lists: [hla_b27_test]
+    positive_values: ["positive", "detected"]
+  sacroiliitis_on_imaging:
+    label: Sacroiliitis on imaging
+    code_lists: [sacroiliitis_imaging, mri_si_joints, xray_si_joints]
+  uveitis_history:
+    label: History of uveitis
+    code_lists: [uveitis]
+  psoriasis_history:
+    label: History of psoriasis
+    code_lists: [psoriasis]
+  ibd_history:
+    label: History of inflammatory bowel disease
+    code_lists: [inflammatory_bowel_disease]
+  enthesitis_history:
+    label: Heel or other enthesitis
+    code_lists: [enthesitis]
+  nsaid_response:
+    label: Good response to NSAIDs
+    code_lists: [nsaid_therapy]
+    intake_keys: [nsaid_relief]
+  raised_inflammatory_markers:
+    label: Raised CRP or ESR
+    code_lists: [crp_test, esr_test]
+
+criteria:
+  asas_imaging_arm:
+    label: ASAS classification, imaging arm
+    kind: set
+    entry: [chronic_back_pain, onset_before_45]
+    required: [sacroiliitis_on_imaging]
+    any_of:
+      min: 1
+      signals:
+        - inflammatory_back_pain
+        - hla_b27_positive
+        - uveitis_history
+        - psoriasis_history
+        - ibd_history
+        - enthesitis_history
+        - nsaid_response
+        - raised_inflammatory_markers
+  asas_clinical_arm:
+    label: ASAS classification, clinical arm
+    kind: set
+    entry: [chronic_back_pain, onset_before_45]
+    required: [hla_b27_positive]
+    any_of:
+      min: 2
+      signals:
+        - inflammatory_back_pain
+        - uveitis_history
+        - psoriasis_history
+        - ibd_history
+        - enthesitis_history
+        - nsaid_response
+        - raised_inflammatory_markers
+  spartan_referral:
+    label: SPARTAN referral points
+    kind: points
+    items:
+      inflammatory_back_pain: 2
+      hla_b27_positive: 3
+      sacroiliitis_on_imaging: 3
+      uveitis_history: 2
+      psoriasis_history: 1
+      ibd_history: 2
+      enthesitis_history: 1
+      nsaid_response: 1
+      raised_inflammatory_markers: 1
+    pass_score: 4
+
+counter_evidence:
+  established_mechanical_cause:
+    label: Documented mechanical or structural cause for the back pain
+    code_lists: [mechanical_back_pain]
+    effect: demote
+    demote_to: Low
+  widespread_pain_syndrome:
+    label: Widespread pain syndrome better explains the picture
+    code_lists: [fibromyalgia]
+    effect: demote
+    demote_to: Moderate
+  specialist_excluded:
+    label: A rheumatologist has already excluded the condition
+    intake_keys: [rheumatology_excluded]
+    effect: demote
+    demote_to: Low
+
+# How a counter-evidence rule changes the tier, declared as data rather than
+# as a branch in code: each rule above names its effect and the tier it may
+# demote to, and these entries say what each effect means.
+demotion_rules:
+  demote:
+    label: Lower the tier to the rule's demote_to value when the rule matches.
+    applies_to: counter_evidence
+    tier_from: demote_to
+    never_raises: true
+
+thresholds:
+  high: 0.6
+  moderate: 0.3
+  reachable_history_months: 24
+  min_events_for_scoring: 3
+
+workup_items:
+  hla_b27_test:
+    label: HLA-B27 blood test
+    reasoning: A positive result moves this case into the clinical classification arm; a negative result weighs against it.
+    code_lists: [hla_b27_test]
+  mri_si_joints:
+    label: MRI of the sacroiliac joints
+    reasoning: Imaging is the only way to show active sacroiliitis when plain films are normal.
+    code_lists: [mri_si_joints]
+  inflammatory_markers:
+    label: CRP and ESR
+    reasoning: Raised markers support an inflammatory cause and give a baseline before treatment.
+    code_lists: [crp_test, esr_test]
+  rheumatology_referral:
+    label: Referral to rheumatology
+    reasoning: A specialist confirms or excludes the diagnosis and can start treatment without further delay.
+    code_lists: []
+
+copy:
+  tier_high_headline: Your history has several patterns worth checking with a specialist.
+  tier_moderate_headline: Your history has a few patterns worth mentioning at your next visit.
+  tier_low_headline: Your history does not show the patterns we look for.
+  insufficient_history_headline: We do not have enough of your history to say anything useful yet.
+  insufficient_history_detail: Records before your earliest available visit are not reachable, so some of the picture is missing.
+  next_step_prompt: Bring this summary to your next appointment and ask about the suggested tests.
+  disclaimer: This is not a diagnosis. Only a clinician can tell you what your symptoms mean.
+
+prohibited_terms:
+  - axial spondyloarthritis
+  - axSpA
+  - High
+  - Moderate
+  - score

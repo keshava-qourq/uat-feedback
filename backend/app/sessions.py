@@ -23,12 +23,29 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import SessionRow, User
 
-IDLE_TIMEOUT = timedelta(minutes=30)
+#: Used when `SESSION_IDLE_MINUTES` is unset or unreadable.
+DEFAULT_IDLE_MINUTES = 30
+
+
+def idle_timeout() -> timedelta:
+    """The configured idle window (`SESSION_IDLE_MINUTES`), read at call time."""
+    raw = (os.getenv("SESSION_IDLE_MINUTES") or "").strip()
+    try:
+        minutes = float(raw)
+    except ValueError:
+        minutes = DEFAULT_IDLE_MINUTES
+    if minutes <= 0:
+        minutes = DEFAULT_IDLE_MINUTES
+    return timedelta(minutes=minutes)
 
 
 def _hash(token: str) -> str:
     secret = os.getenv("JWT_SECRET_KEY") or os.getenv("SECRET_KEY") or "dev-only-session-salt"
     return hmac.new(secret.encode(), token.encode(), hashlib.sha256).hexdigest()
+
+
+#: The same salted hash the invite and password-set tokens are stored with.
+hash_token = _hash
 
 
 def issue_session(db: Session, user: User) -> str:
@@ -41,11 +58,25 @@ def issue_session(db: Session, user: User) -> str:
             token_hash=_hash(token),
             created_at=now,
             last_seen_at=now,
-            idle_expires_at=now + IDLE_TIMEOUT,
+            idle_expires_at=now + idle_timeout(),
         )
     )
     db.commit()
     return token
+
+
+def revoke_all_sessions(db: Session, user_id: str) -> int:
+    """Revoke every live session of this user; returns how many were revoked."""
+    now = datetime.now(UTC)
+    rows = list(
+        db.execute(
+            select(SessionRow).where(SessionRow.user_id == user_id, SessionRow.revoked_at.is_(None))
+        ).scalars()
+    )
+    for row in rows:
+        row.revoked_at = now
+    db.commit()
+    return len(rows)
 
 
 def revoke_session(db: Session, token: str) -> None:
@@ -92,7 +123,7 @@ def current_user(
     if user is None or not user.is_active:
         raise _unauthenticated()
     row.last_seen_at = now
-    row.idle_expires_at = now + IDLE_TIMEOUT
+    row.idle_expires_at = now + idle_timeout()
     db.commit()
     return user
 

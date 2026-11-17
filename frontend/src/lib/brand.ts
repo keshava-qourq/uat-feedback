@@ -1,10 +1,10 @@
 export const brand = {
-  primaryColor: "#12201c",
-  accentColor: "#9fb57f",
-  neutralColor: "#79857a",
-  backgroundColor: "#eef1e6",
-  radius: "0px",
-  fontHeading: "\"Copperplate\", \"Trajan Pro\", \"Optima\", Georgia, serif",
-  fontBody: "\"Helvetica Neue\", Helvetica, Arial, sans-serif",
-  density: "comfortable",
+  primaryColor: "#111111",
+  accentColor: "#0e766e",
+  neutralColor: "#5eead4",
+  backgroundColor: "#ffffff",
+  radius: "2px",
+  fontHeading: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontBody: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  density: "compact",
 } as const;

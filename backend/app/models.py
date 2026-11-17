@@ -28,6 +28,7 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -36,6 +37,9 @@ __all__ = [
     "Base",
     "User",
     "SessionRow",
+    "PasswordSetToken",
+    "Invite",
+    "Decision",
     "Patient",
     "Event",
     "Note",
@@ -45,7 +49,15 @@ __all__ = [
     "Persona",
     "IngestRun",
     "IngestFileResult",
+    "ConditionPack",
+    "PackChangeLog",
 ]
+
+#: JSON everywhere, JSONB on PostgreSQL. The architecture stores the condition
+#: pack as JSONB (indexable, no re-parse per read); SQLite -- which the unit
+#: tests and a fresh clone run on -- has only JSON, and this one declaration
+#: keeps the model and the migration describing the same column on both.
+JSONB_OR_JSON = JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 
 def _uuid() -> str:
@@ -99,6 +111,79 @@ class SessionRow(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class PasswordSetToken(Base):
+    """One first-sign-in (or reset) link: stored hashed, expiring, single-use.
+
+    The plaintext token exists only in the link that was mailed; the row keeps
+    its salted hash, so no endpoint can recover or re-display a live token.
+    """
+
+    __tablename__ = "password_set_tokens"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    # A plain string, not an FK: `users` is created by `create_all`, not by a
+    # migration -- the same reason `Patient.assigned_clinician_id` is one.
+    user_id: Mapped[str] = mapped_column(String, index=True)
+    token_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Invite(Base):
+    """One single-use patient invite link, scoped to exactly one patient.
+
+    The opaque token exists in plaintext only in the link handed to the
+    clinician once; the row keeps its salted hash, so no endpoint can recover
+    or list a live token (NFR-009). The invite grants the patient role and
+    nothing else, and is refused identically once consumed, revoked or past
+    `expires_at`.
+    """
+
+    __tablename__ = "invites"
+    __table_args__ = (Index("ix_invites_patient_id_created_at", "patient_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    patient_id: Mapped[str] = mapped_column(String, ForeignKey("patients.id"), nullable=False)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)
+    token_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
+    # The role this invite grants: patient, always (NFR-009).
+    granted_role: Mapped[str] = mapped_column(String, default="patient")
+    created_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Decision(Base):
+    """A clinician's agree / disagree / need-more-info on a case.
+
+    `clinician_id` always comes from the verified session, never from the
+    request body, so every decision is attributable to the signed-in account.
+    """
+
+    __tablename__ = "decisions"
+    __table_args__ = (Index("ix_decisions_patient_id_created_at", "patient_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    patient_id: Mapped[str] = mapped_column(String, ForeignKey("patients.id"), nullable=False)
+    clinician_id: Mapped[str] = mapped_column(String, nullable=False)
+    decision: Mapped[str] = mapped_column(String)  # agree | disagree | need_more_info
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tier_at_time: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    superseded_by: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
 class Patient(Base):
     """One patient in the loaded dataset.
 
@@ -133,6 +218,8 @@ class Event(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     patient_id: Mapped[str] = mapped_column(String, ForeignKey("patients.id"), nullable=False)
     source_event_id: Mapped[str] = mapped_column(String)
+    # `event_id` is the source file's column name; the stored column keeps the
+    # unambiguous `source_event_id`, so a reader of either name finds it.
     event_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     event_type: Mapped[str] = mapped_column(String)
     code_system: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -143,7 +230,7 @@ class Event(Base):
     provider_org: Mapped[str | None] = mapped_column(String, nullable=True)
     provider_specialty: Mapped[str | None] = mapped_column(String, nullable=True)
     source_type: Mapped[str] = mapped_column(String)  # "ehr" | "claim" | "patient"
-    source_ref: Mapped[str] = mapped_column(String)
+    source_ref: Mapped[str] = mapped_column(String, index=True)
     encounter_ref: Mapped[str | None] = mapped_column(String, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     dataset_version: Mapped[str] = mapped_column(String)
@@ -157,7 +244,7 @@ class Note(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     patient_id: Mapped[str] = mapped_column(String, ForeignKey("patients.id"), nullable=False)
-    source_ref: Mapped[str] = mapped_column(String)
+    source_ref: Mapped[str] = mapped_column(String, index=True)
     note_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     note_type: Mapped[str] = mapped_column(String)  # "clinic_note" | "imaging_report"
     text: Mapped[str] = mapped_column(Text)
@@ -253,4 +340,52 @@ class IngestFileResult(Base):
     status: Mapped[str] = mapped_column(String)  # "pass" | "fail"
     rows_loaded: Mapped[int] = mapped_column(Integer, default=0)
     rows_rejected: Mapped[int] = mapped_column(Integer, default=0)
+    #: Rejections whose cause was missing or invalid provenance (AC-007).
+    provenance_failures: Mapped[int] = mapped_column(Integer, default=0)
     error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ConditionPack(Base):
+    """One version of a condition pack: every clinical constant, as configuration.
+
+    `config` holds the code lists, signals, criteria, counter-evidence rules,
+    thresholds, workup items, patient copy and prohibited terms; nothing in
+    it is interpreted here (see `app.pack`). A save writes a new row with the
+    next `version` rather than editing one, so an earlier scoring run can
+    always be explained by the pack it ran against.
+
+    The app must start with no pack active, so no row is seeded: every reader
+    goes through `app.pack.active_pack`, which answers None.
+    """
+
+    __tablename__ = "condition_packs"
+    __table_args__ = (Index("ix_condition_packs_pack_key_version", "pack_key", "version"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    pack_key: Mapped[str] = mapped_column(String, index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    config: Mapped[dict | None] = mapped_column(JSONB_OR_JSON, nullable=True)
+    #: Item keys marked as awaiting clinical sign-off, shown as a marker in the UI.
+    awaiting_review: Mapped[dict | None] = mapped_column(JSONB_OR_JSON, nullable=True)
+    # A plain string, not an FK: `users` is created by `create_all`, not by a
+    # migration -- the same reason `Patient.assigned_clinician_id` is one.
+    updated_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+
+class PackChangeLog(Base):
+    """Who changed a pack, when, and a summary of what changed."""
+
+    __tablename__ = "pack_change_log"
+    __table_args__ = (Index("ix_pack_change_log_pack_id_changed_at", "pack_id", "changed_at"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    pack_id: Mapped[str] = mapped_column(String, ForeignKey("condition_packs.id"), nullable=False)
+    changed_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    change_summary: Mapped[dict | None] = mapped_column(JSONB_OR_JSON, nullable=True)

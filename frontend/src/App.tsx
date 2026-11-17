@@ -1,8 +1,11 @@
-import type { ReactNode } from "react";
-import { NavLink, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { useEffect, type ReactNode } from "react";
+import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 
 import SyntheticDataNotice from "@/components/SyntheticDataNotice";
+import { SESSION_EXPIRED_EVENT, apiFetch, clearSessionToken, getSessionToken } from "@/lib/api";
 import { Icons } from "@/lib/icons";
+import SignIn from "@/screens/SignIn";
+import SetPassword from "@/screens/SetPassword";
 import Start from "@/screens/Start";
 import Worklist from "@/screens/Worklist";
 import CaseSummary from "@/screens/CaseSummary";
@@ -23,6 +26,8 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
  * screen here and it inherits the notice from the root layout automatically.
  */
 export const ROUTES: ReadonlyArray<{ path: string; element: ReactNode }> = [
+  { path: "/sign-in", element: <SignIn /> },
+  { path: "/set-password", element: <SetPassword /> },
   { path: "/start", element: <Start /> },
   { path: "/worklist", element: <Worklist /> },
   { path: "/case-summary", element: <CaseSummary /> },
@@ -32,11 +37,30 @@ export const ROUTES: ReadonlyArray<{ path: string; element: ReactNode }> = [
   { path: "/admin", element: <Admin /> },
 ];
 
-// /start is the demo entry point and is drawn without the app menu around it.
-const inShell = (path: string) => path !== "/start";
+// /start is the demo entry point and the auth screens stand alone: all three are drawn
+// without the app menu around them.
+const OUTSIDE_SHELL = ["/start", "/sign-in", "/set-password"];
+const inShell = (path: string) => !OUTSIDE_SHELL.includes(path);
+
+// Clinician and admin areas: without a stored token they bounce to sign-in.
+const GUARDED = ["/worklist", "/case-summary", "/timeline", "/admin"];
+
+function RequireSession({ children }: { children: ReactNode }) {
+  if (!getSessionToken()) return <Navigate to="/sign-in" replace />;
+  return <>{children}</>;
+}
 
 // NFR-017: mounted once, around every route, so no screen file hand-adds the notice.
 function RootLayout() {
+  const navigate = useNavigate();
+  // AC-102/AC-103: apiFetch clears the token and announces any 401 from an authenticated
+  // call; the redirect lives here because api.ts cannot route.
+  useEffect(() => {
+    const onExpired = () => navigate("/sign-in", { replace: true });
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, [navigate]);
+
   return (
     <div className="flex min-h-screen flex-col">
       <SyntheticDataNotice />
@@ -49,6 +73,17 @@ function RootLayout() {
 
 // The app's menu, drawn around every screen except the ones routed outside it below.
 function AppShellLayout() {
+  const navigate = useNavigate();
+  const signOut = async () => {
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // A revoked or expired token is already signed out; clear locally regardless.
+    }
+    clearSessionToken();
+    navigate("/sign-in", { replace: true });
+  };
+
   return (
     <div className="flex min-h-full">
       <aside
@@ -86,6 +121,14 @@ function AppShellLayout() {
             {"Demo personas"}
           </NavLink>
         </nav>
+        <button
+          type="button"
+          onClick={signOut}
+          className="mt-4 flex w-full items-center gap-2 rounded-[var(--brand-radius)] px-3 py-2 text-sm font-medium text-[var(--brand-fg-muted)] hover:bg-[var(--brand-hover)]"
+        >
+          <Icons.ArrowLeft size={16} />
+          {"Sign out"}
+        </button>
       </aside>
       <main className="flex-1 overflow-auto">
         <Outlet />
@@ -100,7 +143,17 @@ export default function App() {
       <Route element={<RootLayout />}>
         <Route element={<AppShellLayout />}>
           {ROUTES.filter((route) => inShell(route.path)).map((route) => (
-            <Route key={route.path} path={route.path} element={route.element} />
+            <Route
+              key={route.path}
+              path={route.path}
+              element={
+                GUARDED.includes(route.path) ? (
+                  <RequireSession>{route.element}</RequireSession>
+                ) : (
+                  route.element
+                )
+              }
+            />
           ))}
         </Route>
         {ROUTES.filter((route) => !inShell(route.path)).map((route) => (

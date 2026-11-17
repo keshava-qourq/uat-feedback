@@ -12,7 +12,8 @@ scoring each screen eventually shows belongs to its own ticket.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from datetime import UTC, datetime
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
@@ -20,8 +21,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Event, Patient, Persona, User
+from app.invites import worklist_invite_status
+from app.models import Decision, Event, IntakeAnswer, Note, Patient, Persona, User
 from app.notice import with_notice
+from app.pack import get_active_pack
 from app.pdf import render_pdf
 from app.sessions import CurrentUser, require_staff
 
@@ -58,19 +61,53 @@ def _my_patient(db: Session, user: User) -> Patient | None:
 def _timeline_items(db: Session, patient: Patient | None) -> list[dict[str, Any]]:
     if patient is None:
         return []
-    rows = db.execute(
-        select(Event).where(Event.patient_id == patient.id).order_by(Event.event_time)
-    ).scalars()
-    return [
-        {
-            "event_id": row.id,
-            "item_time": _iso(row.event_time),
-            "event_type": row.event_type,
-            "display": row.display,
-            "source_type": row.source_type,
+    rows = list(
+        db.execute(
+            select(Event).where(Event.patient_id == patient.id).order_by(Event.event_time)
+        ).scalars()
+    )
+    refs = {row.source_ref for row in rows if row.source_ref}
+    notes: dict[str, Note] = {}
+    if refs:
+        notes = {
+            note.source_ref: note
+            for note in db.execute(
+                select(Note).where(Note.patient_id == patient.id, Note.source_ref.in_(refs))
+            ).scalars()
         }
-        for row in rows
-    ]
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        # The note `source_ref` points at, when there is one: provenance is
+        # followed on the read, so a screen shows the text behind an item
+        # rather than asserting it unsourced (AC-006).
+        note = notes.get(row.source_ref or "")
+        items.append(
+            {
+                "id": row.id,
+                "patient_id": row.patient_id,
+                "event_id": row.source_event_id,
+                "source_event_id": row.source_event_id,
+                "item_time": _iso(row.event_time),
+                "event_time": _iso(row.event_time),
+                "event_type": row.event_type,
+                "code_system": row.code_system,
+                "code": row.code,
+                "display": row.display,
+                "value": row.value,
+                "unit": row.unit,
+                "provider_org": row.provider_org,
+                "provider_specialty": row.provider_specialty,
+                "source_type": row.source_type,
+                "source_ref": row.source_ref,
+                "encounter_ref": row.encounter_ref,
+                "confidence": row.confidence,
+                "dataset_version": row.dataset_version,
+                "note_text": note.text if note else None,
+                "note_type": note.note_type if note else None,
+                "note_time": _iso(note.note_time) if note else None,
+            }
+        )
+    return items
 
 
 @router.get("/api/worklist")
@@ -83,11 +120,58 @@ def worklist(user: Staff, db: Db) -> dict[str, Any]:
                     "patient_id": patient.id,
                     "display_name": patient.display_name,
                     "dataset_patient_id": patient.dataset_patient_id,
+                    # AC-085: none until an invite is issued, then not_yet_opened,
+                    # opened once the link is fetched, intake_completed after intake.
+                    "invite_status": worklist_invite_status(db, patient.id),
                 }
                 for patient in _patients(db)
             ]
         }
     )
+
+
+class DecisionBody(BaseModel):
+    """What a clinician records on a case. The acting account is never in here."""
+
+    decision: Literal["agree", "disagree", "need_more_info"]
+    reason: str | None = None
+    tier_at_time: str | None = None
+
+
+@router.post("/api/cases/{patient_id}/decisions", status_code=status.HTTP_201_CREATED)
+def record_decision(patient_id: str, body: DecisionBody, user: Staff, db: Db) -> dict[str, Any]:
+    """AC-100: the decision stores the acting user_id from the verified session."""
+    patient = db.get(Patient, patient_id)
+    if patient is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    previous = (
+        db.execute(
+            select(Decision)
+            .where(Decision.patient_id == patient_id, Decision.superseded_by.is_(None))
+            .order_by(Decision.created_at.desc())
+        )
+        .scalars()
+        .first()
+    )
+    row = Decision(
+        patient_id=patient_id,
+        clinician_id=user.id,
+        decision=body.decision,
+        reason=body.reason,
+        tier_at_time=body.tier_at_time,
+    )
+    db.add(row)
+    db.flush()
+    if previous is not None:
+        previous.superseded_by = row.id
+    db.commit()
+    return {
+        "decision_id": row.id,
+        "clinician_id": row.clinician_id,
+        "decision": row.decision,
+        "created_at": _iso(row.created_at),
+        "supersedes": previous.id if previous is not None else None,
+    }
 
 
 @router.get("/api/patients/me/timeline")
@@ -99,6 +183,78 @@ def my_timeline(user: CurrentUser, db: Db) -> dict[str, Any]:
             "items": _timeline_items(db, patient),
         }
     )
+
+
+#: The question the intake asks when no condition pack is active: the pack owns
+#: every condition-specific question key (NFR-019), and with no pack the intake
+#: still has to be completable.
+GENERIC_INTAKE_KEYS = ["general_history"]
+
+
+def _intake_questions() -> list[dict[str, str]]:
+    """The intake's questions: the active pack's keys, else the generic one."""
+    pack = get_active_pack()
+    keys: list[str] = []
+    if pack is not None:
+        for signal in pack.signals().values():
+            for key in (signal or {}).get("intake_keys") or []:
+                if key not in keys:
+                    keys.append(key)
+    return [{"key": key} for key in (keys or GENERIC_INTAKE_KEYS)]
+
+
+def _answered_keys(db: Session, patient_id: str) -> set[str]:
+    return set(
+        db.execute(
+            select(IntakeAnswer.question_key).where(IntakeAnswer.patient_id == patient_id)
+        ).scalars()
+    )
+
+
+@router.get("/api/patients/me/intake")
+def my_intake(user: CurrentUser, db: Db) -> dict[str, Any]:
+    """AC-085: what the invited patient still has to answer."""
+    patient = _my_patient(db, user)
+    questions = _intake_questions()
+    answered = _answered_keys(db, patient.id) if patient else set()
+    pending = [question for question in questions if question["key"] not in answered]
+    return with_notice(
+        {
+            "patient_id": patient.id if patient else None,
+            "questions": questions,
+            "next_question": pending[0] if pending else None,
+            "complete": not pending,
+        }
+    )
+
+
+class IntakeAnswerBody(BaseModel):
+    question_key: str
+    answer_value: Any = None
+
+
+@router.post("/api/patients/me/intake/answers")
+def record_intake_answer(body: IntakeAnswerBody, user: CurrentUser, db: Db) -> dict[str, Any]:
+    """Store one intake answer; the last one marks the intake complete (AC-085)."""
+    patient = _my_patient(db, user)
+    if patient is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    keys = [question["key"] for question in _intake_questions()]
+    if body.question_key not in keys:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    answered = _answered_keys(db, patient.id) | {body.question_key}
+    complete = all(key in answered for key in keys)
+    db.add(
+        IntakeAnswer(
+            patient_id=patient.id,
+            question_key=body.question_key,
+            answer_value=body.answer_value,
+            answered_at=datetime.now(UTC),
+            is_complete=complete,
+        )
+    )
+    db.commit()
+    return with_notice({"patient_id": patient.id, "complete": complete})
 
 
 @router.get("/api/patients/me/updates")
@@ -203,6 +359,17 @@ def persona_replay(persona_key: str, user: CurrentUser, db: Db) -> dict[str, Any
             "tracks": {"real_world": bundle["items"], "copilot": bundle["items"]},
         }
     )
+
+
+@router.get("/api/cases/{patient_id}/timeline")
+def case_timeline(patient_id: str, user: Staff, db: Db) -> dict[str, Any]:
+    """One patient's stored events, each with its provenance and note text."""
+    patient = db.get(Patient, patient_id)
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"no patient {patient_id}"
+        )
+    return with_notice({"patient_id": patient.id, "items": _timeline_items(db, patient)})
 
 
 @router.get("/api/evaluation/runs/latest")

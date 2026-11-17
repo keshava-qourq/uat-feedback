@@ -1,11 +1,10 @@
 // @ts-nocheck -- generated from the approved design under its JS runtime contract; not hand-written TypeScript.
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import React from "react";
 
 import { Icons } from "@/lib/icons";
 import { useNavigate } from "@/lib/navigate";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const { Check, ChevronRight, Calendar, Download, ArrowRight, AlertCircle, CheckCircle } = Icons;
 
 const PRIMARY = "#111111";
@@ -163,8 +162,7 @@ function qrMatrix(seed, size) {
         const cc = oc + c;
         if (rr < 0 || cc < 0 || rr >= size || cc >= size) continue;
         const inBox = r >= 0 && r <= 6 && c >= 0 && c <= 6;
-        const edge =
-          inBox && (r === 0 || r === 6 || c === 0 || c === 6);
+        const edge = inBox && (r === 0 || r === 6 || c === 0 || c === 6);
         const core = r >= 2 && r <= 4 && c >= 2 && c <= 4;
         m[rr][cc] = inBox ? edge || core : false;
       }
@@ -188,9 +186,7 @@ export default function Screen() {
 
   const q = QUESTIONS[idx];
   const answeredCount = QUESTIONS.filter((x) => answers[x.id]).length;
-  const progress = completed
-    ? 100
-    : Math.round(((idx + 1) / QUESTIONS.length) * 100);
+  const progress = completed ? 100 : Math.round(((idx + 1) / QUESTIONS.length) * 100);
 
   const choose = (val) => {
     setAnswers((prev) => ({ ...prev, [q.id]: val }));
@@ -214,8 +210,7 @@ export default function Screen() {
   const qrSize = 25;
 
   const sq = { borderRadius: RADIUS };
-  const labelCls =
-    "text-[11px] font-bold uppercase tracking-[0.14em]";
+  const labelCls = "text-[11px] font-bold uppercase tracking-[0.14em]";
 
   const primaryBtn =
     "inline-flex items-center justify-center gap-2 h-11 px-5 text-sm font-bold border-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
@@ -235,10 +230,7 @@ export default function Screen() {
 
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
         {/* Row 1 — page title */}
-        <h1
-          data-wf="b-0-0"
-          className="text-3xl font-bold tracking-[-0.02em] sm:text-4xl"
-        >
+        <h1 data-wf="b-0-0" className="text-3xl font-bold tracking-[-0.02em] sm:text-4xl">
           My health
         </h1>
 
@@ -305,14 +297,9 @@ export default function Screen() {
                 >
                   <div className="flex items-baseline justify-between">
                     <p className={labelCls} style={{ color: PRIMARY }}>
-                      Question{" "}
-                      <span style={{ fontVariantNumeric: "tabular-nums" }}>
-                        {idx + 1}
-                      </span>{" "}
+                      Question <span style={{ fontVariantNumeric: "tabular-nums" }}>{idx + 1}</span>{" "}
                       of{" "}
-                      <span style={{ fontVariantNumeric: "tabular-nums" }}>
-                        {QUESTIONS.length}
-                      </span>
+                      <span style={{ fontVariantNumeric: "tabular-nums" }}>{QUESTIONS.length}</span>
                     </p>
                     <p
                       className="text-[11px] font-semibold"
@@ -383,9 +370,7 @@ export default function Screen() {
                               style={{ accentColor: on ? "#ffffff" : PRIMARY }}
                             />
                             <span>{opt.label}</span>
-                            {on && (
-                              <Check className="ml-auto h-4 w-4" aria-hidden="true" />
-                            )}
+                            {on && <Check className="ml-auto h-4 w-4" aria-hidden="true" />}
                           </label>
                         );
                       })}
@@ -398,8 +383,7 @@ export default function Screen() {
                         role="alert"
                       >
                         <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                        Please choose an answer to continue — your other answers are
-                        kept.
+                        Please choose an answer to continue — your other answers are kept.
                       </p>
                     )}
                   </fieldset>
@@ -466,13 +450,10 @@ export default function Screen() {
                     aria-hidden="true"
                   />
                   <div>
-                    <h2 className="text-lg font-bold tracking-tight">
-                      All 12 questions answered
-                    </h2>
+                    <h2 className="text-lg font-bold tracking-tight">All 12 questions answered</h2>
                     <p className="mt-1 text-sm leading-relaxed" style={{ color: "#444444" }}>
-                      Your answers are saved and added to your health story, tagged
-                      “You told us”. You can head to visit prep to see your history
-                      laid out in plain language.
+                      Your answers are saved and added to your health story, tagged “You told us”.
+                      You can head to visit prep to see your history laid out in plain language.
                     </p>
                   </div>
                 </div>
@@ -483,8 +464,8 @@ export default function Screen() {
                     className="col-span-12 self-center text-sm leading-relaxed sm:col-span-8"
                     style={{ color: "#444444" }}
                   >
-                    Why we ask: every answer fills a gap your records may have missed,
-                    so your clinician starts from the full picture.
+                    Why we ask: every answer fills a gap your records may have missed, so your
+                    clinician starts from the full picture.
                   </p>
                   <div className="col-span-12 sm:col-span-4">
                     <button
@@ -511,12 +492,7 @@ export default function Screen() {
 
         {/* ===== VISIT PREP ===== */}
         {active === "prep" && (
-          <section
-            id="panel-prep"
-            role="tabpanel"
-            aria-labelledby="tab-prep"
-            className="mt-6"
-          >
+          <section id="panel-prep" role="tabpanel" aria-labelledby="tab-prep" className="mt-6">
             {/* Row 7 — visit prep card */}
             <div
               data-wf="b-6-0"
@@ -530,15 +506,14 @@ export default function Screen() {
                 Your history in plain language
               </h2>
               <p className="mt-1 text-xs" style={{ color: "#6b6b6b" }}>
-                Patterns worth raising, with dates and sources — and questions to ask.
-                No diagnosis, no score.
+                Patterns worth raising, with dates and sources — and questions to ask. No diagnosis,
+                no score.
               </p>
 
               <p className="mt-4 text-sm leading-relaxed" style={{ color: "#333333" }}>
-                You've had lower-back and buttock pain on and off since early 2023.
-                Your records show four primary-care visits and two courses of
-                physiotherapy, plus a chiropractor you paid for yourself in 2024 that
-                never made it into your records.
+                You've had lower-back and buttock pain on and off since early 2023. Your records
+                show four primary-care visits and two courses of physiotherapy, plus a chiropractor
+                you paid for yourself in 2024 that never made it into your records.
               </p>
 
               <div className="my-5 h-0 border-t-2" style={{ borderColor: "#e4e4e4" }} />
@@ -609,16 +584,9 @@ export default function Screen() {
                   {qr.map((row, r) =>
                     row.map((on, c) =>
                       on ? (
-                        <rect
-                          key={`${r}-${c}`}
-                          x={c}
-                          y={r}
-                          width={1}
-                          height={1}
-                          fill={PRIMARY}
-                        />
-                      ) : null
-                    )
+                        <rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill={PRIMARY} />
+                      ) : null,
+                    ),
                   )}
                 </svg>
                 <p className={labelCls + " mt-2"} style={{ color: "#6b6b6b" }}>
@@ -673,13 +641,18 @@ export default function Screen() {
                 </p>
                 <p
                   className="mt-2 break-all border-2 px-3 py-2 text-sm"
-                  style={{ borderColor: "#e4e4e4", fontVariantNumeric: "tabular-nums", color: "#333333", ...sq }}
+                  style={{
+                    borderColor: "#e4e4e4",
+                    fontVariantNumeric: "tabular-nums",
+                    color: "#333333",
+                    ...sq,
+                  }}
                 >
                   {SHARE_URL}
                 </p>
                 <p className="mt-2 text-xs" style={{ color: "#6b6b6b" }}>
-                  Only a clinician who signs in can open it. You can revoke it at any
-                  time and the link stops working.
+                  Only a clinician who signs in can open it. You can revoke it at any time and the
+                  link stops working.
                 </p>
               </div>
             )}
@@ -719,10 +692,10 @@ export default function Screen() {
                   Your recent tests came back
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed" style={{ color: "#333333" }}>
-                  Your clinician checked three things — your HLA-B27, your CRP and an
-                  MRI of your sacroiliac joints. All three were done and came back
-                  negative. Your clinician has suggested next steps below. These
-                  results are now on your timeline, tagged “Record”.
+                  Your clinician checked three things — your HLA-B27, your CRP and an MRI of your
+                  sacroiliac joints. All three were done and came back negative. Your clinician has
+                  suggested next steps below. These results are now on your timeline, tagged
+                  “Record”.
                 </p>
 
                 <ul className="mt-4">
@@ -754,9 +727,8 @@ export default function Screen() {
                   What your clinician suggested next
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed" style={{ color: "#333333" }}>
-                  Keep noting your morning stiffness and night pain, and book a
-                  follow-up if the stiffness continues for another few weeks. Nothing
-                  here needs action today.
+                  Keep noting your morning stiffness and night pain, and book a follow-up if the
+                  stiffness continues for another few weeks. Nothing here needs action today.
                 </p>
               </div>
 
