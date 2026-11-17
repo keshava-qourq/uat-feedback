@@ -222,8 +222,7 @@ def test_ac101_nfr007_logout_ends_only_the_session_it_was_called_with(api: TestC
     first = login(api, email, password)
     second = login(api, email, password)
     assert first.status_code == 200 and second.status_code == 200, (
-        f"the clinician could not open two sessions: {first.status_code} / "
-        f"{second.status_code}"
+        f"the clinician could not open two sessions: {first.status_code} / {second.status_code}"
     )
     first_token = first.json()["token"]
     second_token = second.json()["token"]
@@ -353,8 +352,7 @@ def test_ac103_nfr007_deactivation_revokes_every_session_and_blocks_later_sign_i
         else:
             assert set(response.json()) == {"detail"}
     assert not still_working, (
-        f"these sessions of the deactivated account still answer (index, status): "
-        f"{still_working}"
+        f"these sessions of the deactivated account still answer (index, status): {still_working}"
     )
 
     after = login(api, email, password)
@@ -428,8 +426,7 @@ def test_ac104_re_using_a_password_set_token_is_409(api: TestClient) -> None:
 
     second = set_password(api, token, _new_password())
     assert second.status_code == 409, (
-        f"re-using a consumed password-set token returned {second.status_code}: "
-        f"{second.text[:200]}"
+        f"re-using a consumed password-set token returned {second.status_code}: {second.text[:200]}"
     )
     assert set(second.json()) == {"detail"}
 
