@@ -135,8 +135,7 @@ def test_ac085_the_worklist_row_reports_not_yet_opened_then_opened(api: TestClie
 
     before = _invite_status(_worklist_row(api, clinician, patient_id))
     assert before in NOT_YET_OPENED, (
-        f"a freshly issued invite reads {before!r} on the worklist; it must read "
-        "'not yet opened'"
+        f"a freshly issued invite reads {before!r} on the worklist; it must read 'not yet opened'"
     )
 
     visited = api.get(f"{INVITES}/{token}")
@@ -317,8 +316,7 @@ def test_ac086_nfr009_an_accepted_session_reaches_only_that_patients_own_data(
 
     own = api.get("/api/patients/me/timeline", headers=headers)
     assert own.status_code == 200, (
-        f"the invited patient cannot read their own timeline: {own.status_code} "
-        f"{own.text[:300]}"
+        f"the invited patient cannot read their own timeline: {own.status_code} {own.text[:300]}"
     )
 
     refused = []
@@ -349,15 +347,13 @@ def test_ac086_an_unknown_invite_token_is_404(api: TestClient) -> None:
 
     validated = api.get(f"{INVITES}/{unknown}")
     assert validated.status_code == 404, (
-        f"GET {INVITES}/{{unknown token}} returned {validated.status_code}: "
-        f"{validated.text[:200]}"
+        f"GET {INVITES}/{{unknown token}} returned {validated.status_code}: {validated.text[:200]}"
     )
     assert set(validated.json()) == {"detail"}
 
     accepted = accept(api, unknown, new_password())
     assert accepted.status_code == 404, (
-        f"accepting an unknown invite token returned {accepted.status_code}: "
-        f"{accepted.text[:200]}"
+        f"accepting an unknown invite token returned {accepted.status_code}: {accepted.text[:200]}"
     )
     assert set(accepted.json()) == {"detail"}
 
@@ -388,8 +384,7 @@ def test_ac086_an_unauthenticated_issue_is_401(api: TestClient) -> None:
     )
 
     assert response.status_code == 401, (
-        f"POST {INVITES} unauthenticated returned {response.status_code}: "
-        f"{response.text[:200]}"
+        f"POST {INVITES} unauthenticated returned {response.status_code}: {response.text[:200]}"
     )
     assert set(response.json()) == {"detail"}
 

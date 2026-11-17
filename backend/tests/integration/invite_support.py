@@ -126,13 +126,9 @@ def _cohort_from_worklist(api: TestClient, admin: dict[str, str]) -> dict[str, s
     whose invite status is the one its own freshly issued invite sets.
     """
     rows = _worklist_rows(api, admin)
-    uninvited = [
-        row for row in rows if str(row.get("invite_status") or "none").lower() == "none"
-    ]
+    uninvited = [row for row in rows if str(row.get("invite_status") or "none").lower() == "none"]
     chosen = uninvited if len(uninvited) >= 2 else rows
-    return {
-        str(row["dataset_patient_id"]): str(row["patient_id"]) for row in chosen
-    }
+    return {str(row["dataset_patient_id"]): str(row["patient_id"]) for row in chosen}
 
 
 def _try_ingest(api: TestClient, admin: dict[str, str]) -> None:
@@ -158,8 +154,7 @@ def _try_ingest(api: TestClient, admin: dict[str, str]) -> None:
     if response.status_code == 409:
         return
     assert response.status_code in (200, 202), (
-        f"starting the cohort's ingest run returned {response.status_code}: "
-        f"{response.text[:300]}"
+        f"starting the cohort's ingest run returned {response.status_code}: {response.text[:300]}"
     )
     wait_for_run(api, admin, response.json()["run_id"])
 
@@ -265,8 +260,7 @@ def patient_session(api: TestClient, token: str) -> str:
     """Accept an invite and return the patient-role session token it hands back."""
     response = accept(api, token)
     assert response.status_code == 200, (
-        f"POST {INVITES}/{{token}}/accept returned {response.status_code}: "
-        f"{response.text[:300]}"
+        f"POST {INVITES}/{{token}}/accept returned {response.status_code}: {response.text[:300]}"
     )
     session = find(response.json(), ("token", "session_token", "access_token"))
     assert session, f"accepting the invite answered no session token: {response.text[:300]}"
