@@ -18,7 +18,7 @@ from app.auth import is_authenticated_request
 from app.bootstrap import seed_bootstrap_accounts
 from app.config import allowed_origins
 from app.database import Base, SessionLocal, engine
-from app.pack import active_pack_status, log_active_pack
+from app.pack import log_active_pack
 from app.routers import admin, auth, data, ingest_runs, invites, pack
 from app.services import configured_services
 
@@ -108,10 +108,7 @@ def health() -> dict[str, object]:
     is up from a Postgres or Redis that is down. The active dataset version
     belongs to the administrator page (`GET /api/admin/settings`), not here.
     """
-    return {
-        "status": "ok",
-        **configured_services(),
-        # Whether a condition pack is active, and which one. With none, the
-        # value is {"active": false, "key": null} (AC-022).
-        "condition_pack": active_pack_status(),
-    }
+    # Exactly {status, db, cache, queue}: the approved API spec fixes this
+    # shape. Whether a condition pack is active is reported by the startup log
+    # and by `GET /api/admin/settings` (AC-022), never here.
+    return {"status": "ok", **configured_services()}

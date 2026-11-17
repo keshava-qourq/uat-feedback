@@ -180,12 +180,19 @@ def test_ac022_the_configured_pack_is_active_when_enabled(monkeypatch, pack_key:
 
 
 def test_ac022_health_reports_that_no_condition_pack_is_active(client, monkeypatch) -> None:
+    """The app stays up with no pack; `/health` keeps its contracted shape.
+
+    `GET /health` is fixed by the API spec as {status, db, cache, queue}, so
+    which pack is active is reported by `app.pack.active_pack_status` (and the
+    admin settings route that serves it), not in the health body.
+    """
     monkeypatch.delenv("CONDITION_PACK_KEY", raising=False)
 
     body = client.get("/health").json()
 
     assert body["status"] == "ok"
-    assert body["condition_pack"] == {"active": False, "key": None}
+    assert set(body) == {"status", "db", "cache", "queue"}
+    assert registry.active_pack_status() == {"active": False, "key": None}
 
 
 def test_ac022_the_startup_log_reports_that_no_pack_is_active(monkeypatch, caplog) -> None:

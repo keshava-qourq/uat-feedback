@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App, { ROUTES } from "@/App";
+import { clearSessionToken, setSessionToken } from "@/lib/api";
 import SyntheticDataNotice, { SYNTHETIC_DATA_NOTICE } from "./SyntheticDataNotice";
 
 beforeEach(() => {
@@ -15,6 +16,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  clearSessionToken();
 });
 
 describe("SyntheticDataNotice", () => {
@@ -44,7 +46,10 @@ describe("SyntheticDataNotice", () => {
     },
   );
 
-  it("[AC-SIMPLIFY] a shell route is still drawn inside the app menu", () => {
+  it("[AC-101][AC-SIMPLIFY] a shell route is still drawn inside the app menu when signed in", () => {
+    // AC-101: /worklist is a clinician page, so it only draws with a live session;
+    // without one the guard sends it to /sign-in, outside the shell.
+    setSessionToken(crypto.randomUUID());
     render(
       <MemoryRouter initialEntries={["/worklist"]}>
         <App />

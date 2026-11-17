@@ -13,7 +13,7 @@ replace-the-prior-load step (NFR-021).
 from __future__ import annotations
 
 import os
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -33,6 +33,36 @@ router = APIRouter(
 )
 
 IN_PROGRESS = ("queued", "running")
+
+#: How long a run may sit in queued/running without its job reporting anything
+#: before it is treated as abandoned. NFR-021 serialises *live* runs; a row left
+#: behind by an interrupted process must not lock ingest out forever.
+STALE_AFTER = timedelta(minutes=30)
+
+
+def _aware(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+def _live_run(db: Session) -> IngestRun | None:
+    """The run that is genuinely still going, if any; stale rows are closed off."""
+    rows = db.execute(select(IngestRun).where(IngestRun.status.in_(IN_PROGRESS))).scalars().all()
+    cutoff = datetime.now(UTC) - STALE_AFTER
+    live: IngestRun | None = None
+    changed = False
+    for row in rows:
+        started = _aware(row.started_at)
+        if started is not None and started < cutoff:
+            row.status = "failed"
+            row.finished_at = datetime.now(UTC)
+            changed = True
+            continue
+        live = live or row
+    if changed:
+        db.commit()
+    return live
 
 
 class StartIngestRun(BaseModel):
@@ -120,9 +150,7 @@ def start_ingest_run(
             ),
         )
 
-    running = (
-        db.execute(select(IngestRun).where(IngestRun.status.in_(IN_PROGRESS))).scalars().first()
-    )
+    running = _live_run(db)
     if running is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
