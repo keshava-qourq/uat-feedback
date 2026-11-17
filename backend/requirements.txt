@@ -1,4 +1,4 @@
-fastapi~=0.115.0
+fastapi==0.115.14
 uvicorn[standard]==0.32.0
 sqlalchemy==2.0.35
 alembic==1.13.3
@@ -8,12 +8,12 @@ psycopg[binary]==3.2.3
 # Checks. The platform installs and runs this file before it reports that the
 # generated tests pass, so the test dependencies belong here rather than in a
 # second file nobody installs. httpx is what fastapi.testclient runs on.
-httpx>=0.27
-pytest>=8.3
+httpx==0.28.1
+pytest==9.2.0
 # Coverage for the sprint's unit-test check, reported as JSON the platform reads
 # back to show on the development dashboard.
-pytest-cov>=5.0
-ruff>=0.6
+pytest-cov==7.1.0
+ruff==0.17.5
 
 # Read back the generated PDF exports in the tests, so "the notice is on every
 # page" (AC-120) is measured per page rather than on the whole byte stream.

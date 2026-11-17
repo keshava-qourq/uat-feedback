@@ -137,9 +137,7 @@ def test_ac020_the_pack_carries_every_piece_of_condition_logic(api: TestClient) 
         for criterion, names in REQUIRED_SECTIONS.items()
         if _section(config, names) is None
     ]
-    assert not missing, (
-        f"the pack carries no section for: {missing}; it has {sorted(config)}"
-    )
+    assert not missing, f"the pack carries no section for: {missing}; it has {sorted(config)}"
 
     criteria = _section(config, REQUIRED_SECTIONS["criteria (ASAS and SPARTAN)"])
     criteria_text = " ".join(_strings(criteria)).upper()
@@ -214,9 +212,7 @@ def test_nfr019_an_edit_applies_without_a_code_deployment(api: TestClient) -> No
         headers=headers,
         json={"config": edited, "change_summary": "QA edit: code list and threshold change"},
     )
-    assert saved.status_code == 200, (
-        f"PUT {PACK} returned {saved.status_code}: {saved.text[:300]}"
-    )
+    assert saved.status_code == 200, f"PUT {PACK} returned {saved.status_code}: {saved.text[:300]}"
     saved_body = saved.json()
     assert saved_body.get("version", version) > version, (
         f"saving the pack did not write a new version: {saved_body}"
@@ -302,8 +298,7 @@ def test_ac022_ingest_and_timeline_routes_still_answer_with_no_pack(
     for path in ("/api/patients/me/timeline", "/api/worklist"):
         response = client.request("GET", path, headers=headers)
         assert response.status_code < 500, (
-            f"with no pack active GET {path} errored: {response.status_code} "
-            f"{response.text[:200]}"
+            f"with no pack active GET {path} errored: {response.status_code} {response.text[:200]}"
         )
         assert set(response.json()) >= {"detail"} or isinstance(response.json(), (dict, list))
 
