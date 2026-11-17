@@ -171,9 +171,7 @@ def _event_objects(payloads: dict[str, Any], drop: ProvenanceDrop) -> list[tuple
 
 
 def _missing_fields(obj: dict) -> list[str]:
-    return [
-        field for field, aliases in FIELD_ALIASES.items() if not any(a in obj for a in aliases)
-    ]
+    return [field for field, aliases in FIELD_ALIASES.items() if not any(a in obj for a in aliases)]
 
 
 # ------------------------------------------------------------------------ AC-005
