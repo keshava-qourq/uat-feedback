@@ -3,6 +3,16 @@
 > Maintained by QuorQ AI SDLC. Text between `sdlc:auto` markers is regenerated; anything outside them is yours and is kept.
 
 <!-- sdlc:auto:start releases -->
+## 6f6de49208ab — 2026-11-17
+
+**Commit:** `6f6de49`
+
+**Delivered:**
+- US-002: Keep provenance on every stored fact
+- US-007: Hold all condition logic in one declarative pack
+- US-026: Invite a patient to the product
+- US-031: Sign in as a clinician with an email and password
+
 ## fabe3d2e3293 — 2026-11-16
 
 **Commit:** `fabe3d2`
