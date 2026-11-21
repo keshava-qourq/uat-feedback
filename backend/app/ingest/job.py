@@ -743,6 +743,33 @@ def run_ingest(
     return {"run_id": run_id, "status": status, "patient_count": patient_count}
 
 
+def active_run_ids() -> set[str] | None:
+    """The run ids that still have a job queued or started on the ingest queue.
+
+    `None` means the queue could not be read at all, which is never evidence
+    that a run is finished: the caller then falls back to the age of the row.
+    A run whose job has crashed, been reaped or lost its Redis keys appears in
+    neither place, so it is no longer live and must not pin ingest shut.
+    """
+    try:
+        import redis
+        from rq import Queue
+        from rq.job import Job
+        from rq.registry import StartedJobRegistry
+
+        connection = redis.from_url(os.environ["REDIS_URL"])
+        queue = Queue("ingest", connection=connection)
+        jobs = list(queue.jobs)
+        for job_id in StartedJobRegistry(queue=queue).get_job_ids():
+            try:
+                jobs.append(Job.fetch(job_id, connection=connection))
+            except Exception:  # noqa: BLE001 -- a job that vanished mid-read is not live
+                continue
+    except Exception:  # noqa: BLE001 -- an unreadable queue tells us nothing
+        return None
+    return {str(job.args[0]) for job in jobs if job is not None and job.args}
+
+
 def enqueue_ingest(
     run_id: str, dataset_version: str, source_uri: str, seed: int | None = None
 ) -> str:
