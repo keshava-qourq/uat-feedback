@@ -104,9 +104,7 @@ def test_ac004_a_run_that_cannot_purge_is_reported_failed_not_left_running(sessi
     """
     session = sessions()
     try:
-        run = IngestRun(
-            dataset_version="v-broken", status="running", started_at=datetime.now(UTC)
-        )
+        run = IngestRun(dataset_version="v-broken", status="running", started_at=datetime.now(UTC))
         session.add(run)
         session.commit()
         run_id = run.id
