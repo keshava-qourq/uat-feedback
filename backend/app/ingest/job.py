@@ -43,11 +43,13 @@ from app.database import SessionLocal
 from app.ingest.source import list_source_files, open_source_file
 from app.models import (
     CoveragePeriod,
+    Decision,
     EncounterTruth,
     Event,
     IngestFileResult,
     IngestRun,
     IntakeAnswer,
+    Invite,
     Note,
     Patient,
     Persona,
@@ -563,9 +565,23 @@ def _run_state(run_id: str, **values: Any) -> None:
 
 
 def _purge(db: Session, dataset_version: str) -> None:
-    """Remove the prior load of this dataset version, children first."""
+    """Remove the prior load of this dataset version, children first.
+
+    Every table that carries a foreign key to `patients` has to be listed here:
+    one that is not makes the delete of the patient row a foreign-key violation,
+    which fails the whole job and leaves its run stuck in `running`.
+    """
     patient_ids = select(Patient.id).where(Patient.dataset_version == dataset_version)
-    for model in (Persona, IntakeAnswer, Note, CoveragePeriod, EncounterTruth, Event):
+    for model in (
+        Persona,
+        IntakeAnswer,
+        Note,
+        CoveragePeriod,
+        EncounterTruth,
+        Event,
+        Invite,
+        Decision,
+    ):
         db.execute(delete(model).where(model.patient_id.in_(patient_ids)))
     db.execute(delete(Patient).where(Patient.dataset_version == dataset_version))
 
@@ -668,6 +684,10 @@ def run_ingest(
     try:
         _purge(db, dataset_version)
         db.commit()
+    except Exception as exc:  # noqa: BLE001 -- a run that cannot start must not stay "running"
+        db.rollback()
+        _run_state(run_id, status="failed", finished_at=datetime.now(UTC))
+        return {"run_id": run_id, "status": "failed", "patient_count": 0, "error": str(exc)}
     finally:
         db.close()
 
