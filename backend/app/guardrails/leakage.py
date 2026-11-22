@@ -41,7 +41,6 @@ __all__ = [
     "check_cohort",
     "check_patient",
     "check_payload",
-    "report",
     "unchecked_patients",
 ]
 
@@ -122,16 +121,3 @@ def check_cohort(db) -> GuardrailResult:
     return GuardrailResult(guardrail=GUARDRAIL, violations=violations)
 
 
-def report(db) -> dict[str, Any]:
-    """The cohort result as plain data, for a build log or a check."""
-    outcome = check_cohort(db)
-    return {
-        "guardrail": GUARDRAIL,
-        "ok": outcome.ok,
-        "count": outcome.count,
-        "violations": [
-            {"where": violation.where, "detail": violation.detail}
-            for violation in outcome.violations
-        ],
-        "unchecked": unchecked_patients(db),
-    }

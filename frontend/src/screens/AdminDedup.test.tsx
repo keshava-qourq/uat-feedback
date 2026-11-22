@@ -62,6 +62,37 @@ function mockApi(
   });
 }
 
+const RUN_ID = "run-1111-2222-3333";
+
+const INGEST_REPORT = {
+  run_id: RUN_ID,
+  status: "passed",
+  dataset_version: "v0.1",
+  seed: 42,
+  patient_count: 5006,
+  started_at: "2026-11-20T10:00:00+00:00",
+  finished_at: "2026-11-20T10:04:00+00:00",
+  files: [
+    { file: "patients.csv", status: "passed", rows_loaded: 5006, rows_rejected: 0, error: null },
+    { file: "events.csv", status: "failed", rows_loaded: 0, rows_rejected: 120, error: "bad rows" },
+  ],
+};
+
+const ingestApi = () =>
+  vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    const u = String(url);
+    if (u.endsWith("/api/admin/ingest-runs") && init?.method === "POST") {
+      return { ok: true, status: 202, json: async () => ({ run_id: RUN_ID }) } as Response;
+    }
+    if (u.endsWith(`/api/admin/ingest-runs/${RUN_ID}`)) {
+      return { ok: true, status: 200, json: async () => INGEST_REPORT } as Response;
+    }
+    if (u.endsWith("/api/admin/settings")) {
+      return { ok: true, status: 200, json: async () => CONNECTED_SETTINGS } as Response;
+    }
+    throw new Error("unexpected call " + u);
+  });
+
 const startCheck = () =>
   userEvent.click(screen.getByRole("button", { name: /run de-duplication check/i }));
 
@@ -132,5 +163,20 @@ describe("Admin de-duplication panel", () => {
     await startCheck();
 
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Unknown job"));
+  });
+});
+
+describe("Admin ingest summary totals", () => {
+  it("[AC-002] a finished run reports loaded, rejected and passed totals once, consistently", async () => {
+    vi.stubGlobal("fetch", ingestApi());
+    render(<Admin />);
+    await userEvent.click(screen.getByRole("button", { name: /run ingest/i }));
+
+    await waitFor(() => expect(screen.getAllByText("5,006").length).toBeGreaterThan(0));
+    expect(screen.getAllByText("120").length).toBeGreaterThan(0);
+    expect(screen.getByText("1 of 2")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ingest passed\. 1 of 2 files passed, 120 rows rejected/),
+    ).toBeInTheDocument();
   });
 });

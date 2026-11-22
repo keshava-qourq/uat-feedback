@@ -11,9 +11,6 @@ its exception text. A handler added later, a library logger nobody configured,
 a traceback rendered by uvicorn's own formatter -- all of them see the masked
 record, because there is only one place a record can come from.
 
-The same logic is also exposed as `CredentialFilter`, so a handler can carry
-it directly.
-
 Values are read fresh for every record rather than snapshotted, so a process
 that picks up its configuration late is still covered.
 """
@@ -27,7 +24,6 @@ __all__ = [
     "MASK",
     "MIN_LENGTH",
     "SECRET_SETTINGS",
-    "CredentialFilter",
     "install_credential_filter",
     "redact",
     "redact_record",
@@ -94,14 +90,6 @@ def redact_record(record: logging.LogRecord) -> logging.LogRecord:
     elif record.exc_text:
         record.exc_text = redact(record.exc_text)
     return record
-
-
-class CredentialFilter(logging.Filter):
-    """Masks any configured credential value in a record before it is written."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        redact_record(record)
-        return True
 
 
 def install_credential_filter() -> None:

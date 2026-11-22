@@ -25,7 +25,6 @@ __all__ = [
     "FAMILY_HISTORY_TYPES",
     "GROUND_TRUTH_KEYS",
     "cutoff_date",
-    "filter_items",
     "ground_truth_keys_in",
     "input_set",
     "is_pre_cutoff",
@@ -93,21 +92,6 @@ def is_pre_cutoff(when: Any, cutoff: date | None, event_type: Any = None) -> boo
     if moment is None:
         return _is_family_history(event_type)
     return moment < cutoff
-
-
-def filter_items(
-    items: list[dict[str, Any]],
-    cutoff: date | None,
-    *,
-    time_key: str = "event_time",
-    type_key: str = "event_type",
-) -> list[dict[str, Any]]:
-    """The items of `items` admissible before `cutoff`, in the order given."""
-    return [
-        item
-        for item in items
-        if is_pre_cutoff(item.get(time_key) or item.get("item_time"), cutoff, item.get(type_key))
-    ]
 
 
 def ground_truth_keys_in(payload: Any) -> list[str]:

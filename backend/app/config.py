@@ -52,11 +52,6 @@ class Settings:
         return bool(self.anthropic_api_key)
 
     @property
-    def database_configured(self) -> bool:
-        """Whether `DATABASE_URL` was actually supplied (not the local fallback)."""
-        return database_url_configured()
-
-    @property
     def sendgrid_configured(self) -> bool:
         return bool(self.sendgrid_api_key)
 

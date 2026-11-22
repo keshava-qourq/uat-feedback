@@ -403,16 +403,21 @@ function AdminScreen() {
   const data = report.data ?? null;
   const status = data ? data.status : start.isPending ? "queued" : "";
   const files = data && Array.isArray(data.files) ? data.files : [];
+  const totalLoaded = files.reduce((s, f) => s + (f.rows_loaded || 0), 0);
+  const totalRejected = files.reduce((s, f) => s + (f.rows_rejected || 0), 0);
+  const passedCount = files.filter((f) => f.status === "passed").length;
+  const running = start.isPending || ACTIVE.includes(status);
+  const pct = files.length ? Math.round((passedCount / files.length) * 100) : 0;
   const ingestNote =
     data && !ACTIVE.includes(data.status)
       ? "Ingest " +
         data.status +
         ". " +
-        files.filter((f) => f.status === "passed").length +
+        passedCount +
         " of " +
         files.length +
         " files passed, " +
-        n0(files.reduce((s, f) => s + (f.rows_rejected || 0), 0)) +
+        n0(totalRejected) +
         " rows rejected. Patients loaded: " +
         n0(data.patient_count) +
         "."
@@ -434,8 +439,6 @@ function AdminScreen() {
   const [errors, setErrors] = React.useState({});
   const [addNote, setAddNote] = React.useState("");
   const tabRefs = React.useRef({});
-
-  const startIngest = () => start.mutate();
 
   // pack validation and diff
   const monthsVal = parseWhole(monthsStr, 1, 60);
@@ -551,12 +554,6 @@ function AdminScreen() {
     setSaveNote("");
   };
 
-  const totalLoaded = files.reduce((s, f) => s + (f.rows_loaded || 0), 0);
-  const totalRejected = files.reduce((s, f) => s + (f.rows_rejected || 0), 0);
-  const running = start.isPending || ACTIVE.includes(status);
-  const passedCount = files.filter((f) => f.status === "passed").length;
-  const pct = files.length ? Math.round((passedCount / files.length) * 100) : 0;
-
   return (
     <div
       className="gx"
@@ -658,7 +655,7 @@ function AdminScreen() {
             <Button
               type="button"
               className="btn btn-p"
-              onClick={startIngest}
+              onClick={() => start.mutate()}
               disabled={running}
               aria-describedby="ingest-hint"
             >
