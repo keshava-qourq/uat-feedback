@@ -117,8 +117,7 @@ def test_ac029_nfr013_no_rendered_read_of_any_patient_carries_a_post_cutoff_item
     )
     assert checked, "no patient of the loaded cohort could be read, so nothing was checked"
     assert not violations, (
-        f"{len(violations)} post-cutoff items are rendered; AC-029 requires zero: "
-        f"{violations[:20]}"
+        f"{len(violations)} post-cutoff items are rendered; AC-029 requires zero: {violations[:20]}"
     )
 
 
@@ -204,8 +203,7 @@ def test_ac008_nfr013_no_ground_truth_field_reaches_any_rendered_patient_payload
                 leaks.append(f"patient {dataset_id} ({patient_uuid}) on {route}: {hit}")
 
     assert not leaks, (
-        f"ground truth reaches {len(leaks)} rendered payloads; AC-008 requires none: "
-        f"{leaks[:20]}"
+        f"ground truth reaches {len(leaks)} rendered payloads; AC-008 requires none: {leaks[:20]}"
     )
 
 

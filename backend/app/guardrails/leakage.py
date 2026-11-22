@@ -119,5 +119,3 @@ def check_cohort(db) -> GuardrailResult:
         violation for patient in _cohort(db) for violation in check_patient(db, patient).violations
     )
     return GuardrailResult(guardrail=GUARDRAIL, violations=violations)
-
-
