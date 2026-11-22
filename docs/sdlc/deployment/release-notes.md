@@ -3,6 +3,17 @@
 > Maintained by QuorQ AI SDLC. Text between `sdlc:auto` markers is regenerated; anything outside them is yours and is kept.
 
 <!-- sdlc:auto:start releases -->
+## f1ada6c52759 — 2026-11-22
+
+**Commit:** `f1ada6c`
+
+**Delivered:**
+- US-003: Quarantine ground-truth labels away from the engine
+- US-004: De-duplicate EHR and claim views of the same encounter
+- US-009: Score each patient only on data available before their cutoff
+- US-017: Configure the LLM credential as deployment configuration
+- US-FIX-1: Fix the scaffold's failing checks
+
 ## 6f6de49208ab — 2026-11-17
 
 **Commit:** `6f6de49`
