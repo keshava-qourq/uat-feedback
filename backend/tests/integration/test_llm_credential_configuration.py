@@ -187,9 +187,7 @@ def test_ac056_nfr011_the_llm_credential_value_is_in_no_file_in_source_control()
             continue
         if value in text:
             offenders.append(str(path.relative_to(REPO_ROOT)))
-    assert not offenders, (
-        f"the language-model credential value appears in these files: {offenders}"
-    )
+    assert not offenders, f"the language-model credential value appears in these files: {offenders}"
 
 
 def test_ac056_nfr011_no_log_line_written_while_serving_the_settings_page_carries_it(
@@ -251,12 +249,10 @@ def test_ac057_nfr011_the_settings_page_shows_a_masked_placeholder_and_connected
         f"{entry.get('status')!r}"
     )
     placeholder = str(entry.get("value", ""))
-    assert placeholder, (
-        f"the language-model credential entry shows no masked placeholder: {entry}"
-    )
+    assert placeholder, f"the language-model credential entry shows no masked placeholder: {entry}"
     assert placeholder != value, "the credential entry shows the credential value itself"
-    assert "not-shown" in placeholder.lower() or "mask" in placeholder.lower() or "*" in (
-        placeholder
+    assert (
+        "not-shown" in placeholder.lower() or "mask" in placeholder.lower() or "*" in (placeholder)
     ), f"the credential is not shown as a masked placeholder: {placeholder!r}"
 
 
@@ -325,9 +321,7 @@ def test_ac057_nfr011_the_settings_page_never_names_a_credential_environment_val
         )
         password = database_url.rsplit("@", 1)[0].rsplit(":", 1)[-1]
         if password and len(password) > 3:
-            assert password not in response.text, (
-                "the settings page shows the database password"
-            )
+            assert password not in response.text, "the settings page shows the database password"
 
     assert any(
         "not-shown" in value.lower() or "mask" in value.lower() or "*" in value
