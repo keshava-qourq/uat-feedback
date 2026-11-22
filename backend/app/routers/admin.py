@@ -19,9 +19,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app import jobs
 from app.auth import require_admin, require_api_access
 from app.database import get_db
 from app.dataset import active_dataset_version
+from app.dedup_check import run_dedup_check
 from app.models import User
 from app.passwords import issue_password_set_token, send_password_set_email
 from app.services import configured_services, database_reachable
@@ -56,6 +58,69 @@ def settings(db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
             {"name": "database", "status": database, "value": MASKED},
             {"name": "llm", "status": llm, "value": MASKED},
         ],
+    }
+
+
+class StartJobRequest(BaseModel):
+    """The job to queue. `kind` is an enumerated set, so anything else is 422."""
+
+    kind: str
+    #: Re-running one specific job: given and already finished, that is a conflict.
+    job_id: str | None = None
+
+
+#: kind -> (the function the worker runs, the queue it runs on).
+JOB_FUNCTIONS: dict[str, Any] = {"dedup_check": run_dedup_check}
+
+FINISHED_STATUSES = frozenset({"finished", "failed"})
+
+
+@router.post("/jobs", status_code=status.HTTP_202_ACCEPTED)
+def start_job(
+    body: StartJobRequest,
+    admin: Annotated[User, Depends(require_admin)],
+) -> dict[str, Any]:
+    """AC-012: queue a background job on the approved Redis queue."""
+    if body.kind not in JOB_FUNCTIONS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"'{body.kind}' is not a job kind; expected one of "
+                f"{', '.join(sorted(JOB_FUNCTIONS))}"
+            ),
+        )
+    if body.job_id:
+        existing = jobs.status(body.job_id)
+        if existing["status"] in FINISHED_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"job {body.job_id} has already finished",
+            )
+    try:
+        job_id = jobs.enqueue(JOB_FUNCTIONS[body.kind], meta={"kind": body.kind})
+    except jobs.QueueUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"the job queue is unavailable: {exc}",
+        ) from exc
+    return {"job_id": job_id, "kind": body.kind, "status": "queued"}
+
+
+@router.get("/jobs/{job_id}")
+def get_job(
+    job_id: str,
+    admin: Annotated[User, Depends(require_admin)],
+) -> dict[str, Any]:
+    """AC-012: the job's status, progress and -- once finished -- its result."""
+    state = jobs.status(job_id)
+    if state["status"] in ("unknown", "unavailable"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"no job {job_id}")
+    return {
+        "job_id": state["job_id"],
+        "kind": state.get("kind"),
+        "status": state["status"],
+        "progress_pct": state.get("progress_pct"),
+        "result": state.get("result"),
     }
 
 

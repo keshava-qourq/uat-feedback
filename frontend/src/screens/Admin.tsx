@@ -7,28 +7,30 @@ import * as UI from "@/lib/ui";
 import { Icons } from "@/lib/icons";
 import { brand } from "@/lib/brand";
 
-const DEDUP = [
+const DEDUP_FIELDS = [
   {
+    key: "matched_to_one_entry",
     label: "Matched to one entry",
-    value: 9641,
     hint: "EHR and claim rows merged into a single timeline entry, visit counted once.",
   },
   {
+    key: "split_into_more_than_one",
     label: "Split into more than one",
-    value: 437,
     hint: "One real encounter that still shows as two or more entries.",
   },
   {
+    key: "merged_in_error",
     label: "Merged in error",
-    value: 96,
     hint: "Source rows joined although they were separate visits.",
   },
   {
+    key: "invisible_care",
     label: "Invisible care",
-    value: 4742,
-    hint: "In encounter_truth.csv but in no source. Counted, never drawn.",
+    hint: "In encounter_truth.csv but in no source. Counted, but never drawn as a timeline entry.",
   },
 ];
+
+const JOB_ACTIVE = ["queued", "started"];
 
 const PROVENANCE = [
   { id: "evt_0412876", patient: "P-00318", missing: "source_ref" },
@@ -344,6 +346,46 @@ function AdminScreen() {
     },
     onError: (err) => setStartError(err.message || "Could not start the ingest run."),
   });
+
+  // De-duplication check: a real background job, started on demand and polled.
+  const [dedupJobId, setDedupJobId] = React.useState(null);
+  const [dedupError, setDedupError] = React.useState("");
+
+  const startDedup = useMutation({
+    mutationFn: () =>
+      apiFetch("/api/admin/jobs", {
+        method: "POST",
+        body: JSON.stringify({ kind: "dedup_check" }),
+      }),
+    onSuccess: (data) => {
+      setDedupError("");
+      setDedupJobId(data.job_id);
+    },
+    onError: (err) => setDedupError(err.message || "Could not start the de-duplication check."),
+  });
+
+  const dedupJob = useQuery({
+    queryKey: ["admin-job", dedupJobId],
+    queryFn: () => apiFetch("/api/admin/jobs/" + dedupJobId),
+    enabled: dedupJobId !== null,
+    retry: false,
+    refetchInterval: (query) => (JOB_ACTIVE.includes(query.state.data?.status) ? 1000 : false),
+  });
+
+  const dedupData = dedupJob.data ?? null;
+  const dedupRunning =
+    startDedup.isPending ||
+    (dedupData ? JOB_ACTIVE.includes(dedupData.status) : dedupJob.isFetching);
+  const dedupResult = dedupData && dedupData.status === "finished" ? dedupData.result : null;
+  const dedupMessage = dedupJob.error
+    ? dedupJob.error.message || "Could not read the de-duplication check."
+    : dedupData && dedupData.status === "failed"
+      ? "The de-duplication check failed. Start it again to retry."
+      : dedupError;
+  const dedupProgress =
+    dedupRunning && dedupData && typeof dedupData.progress_pct === "number"
+      ? dedupData.progress_pct
+      : null;
 
   const settings = useQuery({
     queryKey: ["admin-settings"],
@@ -819,18 +861,44 @@ function AdminScreen() {
               De-duplication check vs encounter_truth.csv
             </h2>
             <Ornament />
-            <p className="small muted num" style={{ margin: "0 0 16px", textAlign: "center" }}>
-              14,820 true encounters checked · visits are counted once in every visit-count signal
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <Button
+                type="button"
+                className="btn btn-s"
+                onClick={() => startDedup.mutate()}
+                disabled={dedupRunning}
+              >
+                {dedupRunning ? "Checking…" : "Run de-duplication check"}
+              </Button>
+            </div>
+            <p
+              className="small muted num"
+              style={{ margin: "0 0 16px", textAlign: "center" }}
+              role="status"
+              aria-live="polite"
+            >
+              {dedupRunning
+                ? "De-duplication check running" +
+                  (dedupProgress === null ? "…" : " · " + dedupProgress + "%")
+                : dedupResult
+                  ? n0(dedupResult.true_encounters) +
+                    " true encounters checked · visits are counted once in every visit-count signal"
+                  : "Not run yet. Start the check to compare the loaded data with encounter_truth.csv."}
             </p>
+            {dedupMessage ? (
+              <p className="small" role="alert" style={{ margin: "0 0 16px", textAlign: "center" }}>
+                {dedupMessage}
+              </p>
+            ) : null}
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-6" style={{ margin: 0 }}>
-              {DEDUP.map((d) => (
+              {DEDUP_FIELDS.map((d) => (
                 <div
                   key={d.label}
                   style={{ borderTop: "1px solid var(--primary)", paddingTop: 12 }}
                 >
                   <dt className="eyebrow">{d.label}</dt>
                   <dd style={{ margin: 0 }}>
-                    <span className="figure">{running ? "…" : n0(d.value)}</span>
+                    <span className="figure">{dedupResult ? n0(dedupResult[d.key]) : "—"}</span>
                     <span className="small muted" style={{ display: "block", marginTop: 4 }}>
                       {d.hint}
                     </span>

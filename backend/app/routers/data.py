@@ -21,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dedup import group_rows, merge_items
 from app.engine.inputs import cutoff_date, is_pre_cutoff
 from app.invites import worklist_invite_status
 from app.models import Decision, Event, IntakeAnswer, Note, Patient, Persona, User
@@ -72,6 +73,18 @@ def _timeline_items(db: Session, patient: Patient | None) -> list[dict[str, Any]
         ).scalars()
     )
     rows = [row for row in rows if is_pre_cutoff(row.event_time, cutoff, row.event_type)]
+    # One real encounter can arrive as an EHR row and the claim it generated:
+    # the same deterministic rule that persists `encounter_group_id` decides
+    # here which rows belong together, so the read is right whether or not the
+    # backfill has run (US-004-1).
+    group_keys: dict[str, str] = {}
+    for index, group in enumerate(group_rows(rows)):
+        key = next(
+            (member.encounter_group_id for member in group if member.encounter_group_id),
+            f"group-{index}",
+        )
+        for member in group:
+            group_keys[member.id] = key
     refs = {row.source_ref for row in rows if row.source_ref}
     notes: dict[str, Note] = {}
     if refs:
@@ -106,6 +119,7 @@ def _timeline_items(db: Session, patient: Patient | None) -> list[dict[str, Any]
                 "source_type": row.source_type,
                 "source_ref": row.source_ref,
                 "encounter_ref": row.encounter_ref,
+                "encounter_group_id": group_keys.get(row.id) or row.encounter_group_id,
                 "confidence": row.confidence,
                 "dataset_version": row.dataset_version,
                 "note_text": note.text if note else None,
@@ -113,7 +127,9 @@ def _timeline_items(db: Session, patient: Patient | None) -> list[dict[str, Any]
                 "note_time": _iso(note.note_time) if note else None,
             }
         )
-    return items
+    # One entry per merged encounter, carrying its sources and the source rows
+    # behind it; still ascending, oldest first (AC-011).
+    return merge_items(items)
 
 
 @router.get("/api/worklist")

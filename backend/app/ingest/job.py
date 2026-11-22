@@ -39,7 +39,7 @@ import pandas as pd
 from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
 
-from app import labels
+from app import dedup, labels
 from app.database import SessionLocal
 from app.ingest.source import list_source_files, open_source_file
 from app.models import (
@@ -757,6 +757,27 @@ def run_ingest(
         if file_name == "patients.csv":
             patient_count = result["rows_loaded"]
         _progress(run_id, file_name, **result)
+
+    if not failed:
+        # Group the EHR and claim rows that describe one real encounter
+        # (US-004-1). Idempotent: a re-run recomputes the same groups.
+        db = SessionLocal()
+        try:
+            dedup.assign_groups(db, dataset_version)
+        except Exception as exc:  # noqa: BLE001 -- a load that is in is not undone by this
+            db.rollback()
+            failed = True
+            _progress(
+                run_id,
+                "encounter_grouping",
+                status="fail",
+                rows_loaded=0,
+                rows_rejected=0,
+                provenance_failures=0,
+                error_detail=f"encounter grouping: {exc}",
+            )
+        finally:
+            db.close()
 
     status = "failed" if failed else "succeeded"
     _run_state(
