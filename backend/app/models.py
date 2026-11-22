@@ -234,6 +234,10 @@ class Event(Base):
     encounter_ref: Mapped[str | None] = mapped_column(String, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     dataset_version: Mapped[str] = mapped_column(String)
+    #: The merged encounter this row contributes to (US-004-1). Server-generated
+    #: UUID, written by `app.dedup.assign_groups` after a load; NULL until then,
+    #: and a row that matches nothing keeps a group of its own.
+    encounter_group_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
 
 
 class Note(Base):
@@ -389,3 +393,9 @@ class PackChangeLog(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     change_summary: Mapped[dict | None] = mapped_column(JSONB_OR_JSON, nullable=True)
+
+
+# The evaluation-only label store's table is declared in `app.labels`, the one
+# module permitted to touch it (US-003). Imported here only so the table is
+# registered on `Base.metadata` wherever the models are.
+from app import labels as _labels  # noqa: E402,F401

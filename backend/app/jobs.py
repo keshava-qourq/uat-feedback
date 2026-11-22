@@ -105,6 +105,8 @@ def status(job_id: str) -> dict[str, Any]:
     meta = job.meta or {}
     return {
         "job_id": job.id,
+        # The kind the route queued it as, stored on the job's meta.
+        "kind": meta.get("kind"),
         # str(): RQ answers with a JobStatus enum, and a response body should
         # carry the plain word a screen compares against.
         "status": str(job.get_status(refresh=False).value),

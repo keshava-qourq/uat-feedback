@@ -75,6 +75,27 @@ def database_url() -> str:
     return _env("DATABASE_URL") or DEFAULT_DATABASE_URL
 
 
+def database_url_configured() -> bool:
+    """Whether a database connection string was supplied as configuration."""
+    return bool(_env("DATABASE_URL"))
+
+
+def llm_api_key() -> str:
+    """The hosted language-model credential, read at call time (NFR-011, AC-056).
+
+    `ANTHROPIC_API_KEY` is the provider's own name for it; `LLM_API_KEY` is
+    the generic name the deployment may supply it under. There is no default
+    and no placeholder: absent means the feature degrades and the settings
+    screen reports "not-configured". The value is never logged or returned.
+    """
+    return _env("ANTHROPIC_API_KEY") or _env("LLM_API_KEY")
+
+
+def llm_configured() -> bool:
+    """Whether the language-model credential exists. Never reveals its value."""
+    return bool(llm_api_key())
+
+
 def redis_url() -> str:
     """The Redis used for both the read cache and the job queue, or "" when absent.
 
@@ -121,6 +142,6 @@ def get_settings() -> Settings:
         media_root=media_root(),
         s3_bucket=_env("S3_BUCKET"),
         aws_region=_env("AWS_REGION"),
-        anthropic_api_key=_env("ANTHROPIC_API_KEY") or _env("LLM_API_KEY"),
+        anthropic_api_key=llm_api_key(),
         sendgrid_api_key=_env("SENDGRID_API_KEY"),
     )

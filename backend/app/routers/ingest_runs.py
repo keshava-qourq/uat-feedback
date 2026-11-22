@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_api_access
 from app.database import get_db
-from app.ingest import enqueue_ingest
+from app.ingest import active_run_ids, enqueue_ingest
 from app.models import IngestFileResult, IngestRun
 
 router = APIRouter(
@@ -39,6 +39,13 @@ IN_PROGRESS = ("queued", "running")
 #: behind by an interrupted process must not lock ingest out forever.
 STALE_AFTER = timedelta(minutes=30)
 
+#: A run is enqueued immediately after its row is committed, so for a moment
+#: the row exists and its job is not on the queue yet. Only that gap -- a
+#: couple of database round-trips -- is covered here; past it the queue is the
+#: authority. Deliberately small: every second of grace is a second an
+#: abandoned row can keep ingest shut.
+QUEUE_GRACE = timedelta(seconds=5)
+
 
 def _aware(value: datetime | None) -> datetime | None:
     if value is None:
@@ -47,14 +54,31 @@ def _aware(value: datetime | None) -> datetime | None:
 
 
 def _live_run(db: Session) -> IngestRun | None:
-    """The run that is genuinely still going, if any; stale rows are closed off."""
+    """The run that is genuinely still going, if any; stale rows are closed off.
+
+    A row is only live while a job actually backs it. The queue is the
+    authority: a run whose job has crashed, been reaped, or lost its Redis
+    keys (every key here is disposable) is abandoned however recently it
+    started, and must not hold ingest shut for the whole stale window. When
+    the queue cannot be read at all it proves nothing, so the row's age is
+    the fallback and NFR-021 still serialises genuinely live runs.
+    """
     rows = db.execute(select(IngestRun).where(IngestRun.status.in_(IN_PROGRESS))).scalars().all()
-    cutoff = datetime.now(UTC) - STALE_AFTER
+    if not rows:
+        return None
+    active = active_run_ids()
+    now = datetime.now(UTC)
+    cutoff = now - STALE_AFTER
+    just_started = now - QUEUE_GRACE
     live: IngestRun | None = None
     changed = False
     for row in rows:
         started = _aware(row.started_at)
-        if started is not None and started < cutoff:
+        if active is not None and not (started is not None and started > just_started):
+            abandoned = row.id not in active
+        else:
+            abandoned = started is not None and started < cutoff
+        if abandoned:
             row.status = "failed"
             row.finished_at = datetime.now(UTC)
             changed = True

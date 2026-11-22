@@ -29,6 +29,20 @@ NAMED_IDENTIFIERS = ("HLA-B27", "HLAB27", "SPARTAN", "ASAS", "axSpA")
 #: A short token (three characters or fewer) is not a usable identifier to scan for.
 MIN_VALUE_LENGTH = 4
 
+#: The ground-truth column of the quarantined label store (AC-008/AC-009). The data
+#: model names this column `axspa_label`: it is a dataset schema name that must be
+#: stored, listed among the forbidden leakage keys and read by the evaluation module
+#: alone, so the exact lower-case token is not hard-coded condition logic. Only this
+#: token is exempt: `axSpA` used as a condition name in logic or patient-facing copy,
+#: and every other named clinical identifier, still fail the scan.
+EXEMPT_TOKEN = re.compile(r"\baxspa(_label)?\b")
+
+
+def _without_exempt_tokens(line: str) -> str:
+    """The line with the label-store field name blanked out, so the scan judges
+    what is left of it."""
+    return EXEMPT_TOKEN.sub(" ", line)
+
 
 def _pack_config() -> dict:
     assert PACK_FILE.exists(), (
@@ -103,13 +117,20 @@ def _code_lines(path: Path) -> list[tuple[int, str]]:
     return out
 
 
-def _hits(needle: str) -> list[str]:
-    """`file:line` for every line of scanned application code containing `needle`."""
+def _hits(needle: str, *, exempt_label_field: bool = False) -> list[str]:
+    """`file:line` for every line of scanned application code containing `needle`.
+
+    With `exempt_label_field`, the label store's ground-truth column name
+    (`axspa_label`, and the bare lower-case `axspa` key naming it) is blanked
+    out of the line before matching, because AC-008/AC-009 require that column
+    to exist, be quarantined and be listed among the forbidden leakage keys.
+    """
     pattern = re.compile(re.escape(needle), re.IGNORECASE)
     found: list[str] = []
     for path in _scanned_files():
         for number, line in _code_lines(path):
-            if pattern.search(line):
+            judged = _without_exempt_tokens(line) if exempt_label_field else line
+            if pattern.search(judged):
                 found.append(f"{path.relative_to(APP.parent)}:{number}: {line.strip()[:120]}")
     return found
 
@@ -117,10 +138,16 @@ def _hits(needle: str) -> list[str]:
 def test_ac021_nfr019_no_named_axspa_identifier_is_hard_coded_outside_the_pack() -> None:
     """AC-021: the scan finds no 'HLA-B27', 'SPARTAN', 'ASAS' or 'axSpA' anywhere
     in backend/app/ outside backend/app/pack/packs/, and names file and line when
-    it does."""
+    it does.
+
+    AC-008/AC-009: the one exemption is the label store's ground-truth column
+    name `axspa_label` (and the bare `axspa` key naming it), which the data
+    model requires to be stored, quarantined and named in the forbidden-key
+    list; the condition name used in logic or copy still fails.
+    """
     offenders: dict[str, list[str]] = {}
     for identifier in NAMED_IDENTIFIERS:
-        hits = _hits(identifier)
+        hits = _hits(identifier, exempt_label_field=True)
         if hits:
             offenders[identifier] = hits
     assert not offenders, (
