@@ -3,68 +3,61 @@
 > Maintained by QuorQ AI SDLC. Text between `sdlc:auto` markers is regenerated; anything outside them is yours and is kept.
 
 <!-- sdlc:auto:start narrative -->
-### DEV-US-002 · approved · source: dev:US-002
+### DEV-US-003 · approved · source: dev:US-003
 
-Ticket US-002, "Keep provenance on every stored fact", was delivered during the completed development run. The work is recorded against a single commit. No further implementation detail was provided in the input.
+Ticket US-003, "Quarantine ground-truth labels away from the engine", was delivered during the development run. The work is attributed to commit 63bcdd7c77b4eda58477e702a743a91bc1eea514. No further implementation detail was provided in the input.
 
-- Ticket: US-002 — Keep provenance on every stored fact
-- Status: delivered
-- Commit: ffcda55dfc7883eadab3ca9c07ea9f2f7d083fa4
-- Development run status: completed
-- Not stated in input: delivery date, author/reviewer, design or test linkage, implementation notes.
+- Ticket: US-003 — Quarantine ground-truth labels away from the engine
+- Status reported by the development run: delivered
+- Commit: 63bcdd7c77b4eda58477e702a743a91bc1eea514
+- The same commit hash is also recorded against ticket US-009; the input does not explain whether this is a shared commit or a recording discrepancy. Both attributions are retained as given.
+- Not stated in the input: date, author/reviewer, files or modules changed, tests run, acceptance evidence.
 
-**Related:** US-002
+**Related:** US-003
 
-### DEV-US-007 · approved · source: dev:US-007
+### DEV-US-004 · approved · source: dev:US-004
 
-Ticket US-007, "Hold all condition logic in one declarative pack", was delivered during the completed development run. One commit is associated with the ticket. The input supplies no additional implementation or review detail.
+Ticket US-004, "De-duplicate EHR and claim views of the same encounter", was delivered during the development run. The work is attributed to commit 0b7afaa3940760d9f6bfdaaea9be5523456ffe09. No further implementation detail was provided in the input.
 
-- Ticket: US-007 — Hold all condition logic in one declarative pack
-- Status: delivered
-- Commit: c21bfb39b7da08c358ac987634b3a040f90d8902
-- Development run status: completed
-- Not stated in input: delivery date, author/reviewer, design or test linkage, implementation notes.
+- Ticket: US-004 — De-duplicate EHR and claim views of the same encounter
+- Status reported by the development run: delivered
+- Commit: 0b7afaa3940760d9f6bfdaaea9be5523456ffe09
+- Not stated in the input: date, author/reviewer, de-duplication rule or matching keys used, data volumes affected, tests run, acceptance evidence.
 
-**Related:** US-007
+**Related:** US-004
 
-### DEV-US-026 · approved · source: dev:US-026
+### DEV-US-009 · approved · source: dev:US-009
 
-Ticket US-026, "Invite a patient to the product", was delivered during the completed development run. The work is tied to a single commit. No supporting rationale or verification evidence was included in the input.
+Ticket US-009, "Score each patient only on data available before their cutoff", was delivered during the development run. The work is attributed to commit 63bcdd7c77b4eda58477e702a743a91bc1eea514. No further implementation detail was provided in the input.
 
-- Ticket: US-026 — Invite a patient to the product
-- Status: delivered
-- Commit: fd70adfc417aa523297228526223a93e855b4685
-- Development run status: completed
-- Not stated in input: delivery date, author/reviewer, design or test linkage, implementation notes.
+- Ticket: US-009 — Score each patient only on data available before their cutoff
+- Status reported by the development run: delivered
+- Commit: 63bcdd7c77b4eda58477e702a743a91bc1eea514
+- The same commit hash is also recorded against ticket US-003; the input does not explain whether the two tickets were landed together in one commit or whether one attribution is in error. Both attributions are recorded as given.
+- Not stated in the input: date, author/reviewer, how the cutoff is defined or enforced, tests run, acceptance evidence.
 
-**Related:** US-026
+**Related:** US-009
 
-### DEV-US-031 · approved · source: dev:US-031
+### DEV-US-017 · approved · source: dev:US-017
 
-Ticket US-031, "Sign in as a clinician with an email and password", was delivered during the completed development run. One commit is recorded for the ticket. Credential handling details and verification evidence were not provided in the input.
+Ticket US-017, "Configure the LLM credential as deployment configuration", was delivered during the development run. The work is attributed to commit 2120acc390cc75268ca0a9206a10b835879d3465. No further implementation detail was provided in the input.
 
-- Ticket: US-031 — Sign in as a clinician with an email and password
-- Status: delivered
-- Commit: 6ad214a03eedfdfb82f9e8bb2227b6c5d702bb92
-- Development run status: completed
-- Not stated in input: delivery date, author/reviewer, authentication mechanism details, design or test linkage.
-- Any credential referenced downstream must be a placeholder such as <set-at-first-login>.
+- Ticket: US-017 — Configure the LLM credential as deployment configuration
+- Status reported by the development run: delivered
+- Commit: 2120acc390cc75268ca0a9206a10b835879d3465
+- The credential itself is supplied at deploy time as configuration (e.g. <llm-api-key>) and is not recorded in this document or in source control.
+- Not stated in the input: date, author/reviewer, configuration mechanism (environment variable, secret store, config file), rotation handling, tests run, acceptance evidence.
 
-**Related:** US-031
+**Related:** US-017
 
-### DEV-RUN-001 · approved · source: dev:development run
+### DEV-US-FIX-1 · draft · source: dev:US-FIX-1
 
-A development run for the axSpA proof of concept completed with four tickets in delivered state. Each ticket maps to exactly one commit. No tickets were reported as blocked, in progress, or rejected in the input.
+Ticket US-FIX-1, "Fix the scaffold's failing checks", is reported as failed. No commit was produced. The input gives no diagnosis, error output, or remediation plan, so the cause and current state of the scaffold's checks remain undocumented.
 
-Development run status: completed.
-
-Delivered tickets and commits:
-- US-002 — Keep provenance on every stored fact — ffcda55dfc7883eadab3ca9c07ea9f2f7d083fa4
-- US-007 — Hold all condition logic in one declarative pack — c21bfb39b7da08c358ac987634b3a040f90d8902
-- US-026 — Invite a patient to the product — fd70adfc417aa523297228526223a93e855b4685
-- US-031 — Sign in as a clinician with an email and password — 6ad214a03eedfdfb82f9e8bb2227b6c5d702bb92
-
-Gaps in the input (not fabricated here): run start/end dates, contributors, branch or environment, code review and QA outcomes, and coverage of the remaining requirement keys (US-001, US-003 through US-006, US-008 through US-025, US-027 through US-030, US-032 through US-044), for which no development records were supplied.
-
-**Related:** US-002, US-007, US-026, US-031
+- Ticket: US-FIX-1 — Fix the scaffold's failing checks
+- Status reported by the development run: failed
+- Commit: none
+- Open point for follow-up: the scaffold's checks were not reported as fixed; the input does not say which checks fail, why the attempt failed, or whether it blocks the delivered tickets.
+- Not stated in the input: date, author, error logs, retry attempts, owner for remediation.
+- No requirement key was given for this ticket in the input, so related_ids is left empty rather than guessed.
 <!-- sdlc:auto:end narrative -->

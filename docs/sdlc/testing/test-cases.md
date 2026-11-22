@@ -3,9 +3,9 @@
 > Maintained by QuorQ AI SDLC. Text between `sdlc:auto` markers is regenerated; anything outside them is yours and is kept.
 
 <!-- sdlc:auto:start summary -->
-274 tests · Passed 262 · Failed 11 · Skipped 0 · Not run 1
+380 tests · Passed 379 · Failed 0 · Skipped 0 · Not run 1
 
-Acceptance criteria covered: 24/146 · passing: 16/146
+Acceptance criteria covered: 35/146 · passing: 35/146
 <!-- sdlc:auto:end summary -->
 
 <!-- sdlc:auto:start tests -->
@@ -61,13 +61,13 @@ Acceptance criteria covered: 24/146 · passing: 16/146
 | AC-145 | Admin connections and settings > [AC-145] an unconfigured deployment shows Not configured and never a credential value | Unit | Passed | `frontend/src/screens/Admin.test.tsx` |
 | AC-001, AC-002, AC-003 | Admin ingest report > [AC-001/AC-002/AC-003] a successful run renders passed files with their counts | Unit | Passed | `frontend/src/screens/Admin.test.tsx` |
 | AC-003 | Admin ingest report > [AC-003] a failed file's row shows its named reason | Unit | Passed | `frontend/src/screens/Admin.test.tsx` |
-| AC-001 | test_ac001_every_required_file_type_is_loaded_with_per_file_row_counts | Integration | Failed | `backend/tests/integration/test_ingest_run_acceptance.py` |
-| AC-002 | test_ac002_the_report_carries_version_seed_patient_count_and_a_pass_line_per_file | Integration | Failed | `backend/tests/integration/test_ingest_run_acceptance.py` |
-| AC-003 | test_ac003_a_file_missing_a_required_column_fails_and_is_named_with_that_column | Integration | Failed | `backend/tests/integration/test_ingest_run_acceptance.py` |
-| AC-004, NFR-021 | test_ac004_nfr021_re_running_replaces_the_prior_load_without_duplicates | Integration | Failed | `backend/tests/integration/test_ingest_run_acceptance.py` |
-| NFR-005 | test_nfr005_the_loaded_cohort_is_served_from_the_database_not_the_raw_files | Integration | Failed | `backend/tests/integration/test_ingest_run_acceptance.py` |
-| NFR-006 | test_nfr006_ingest_runs_as_a_background_job_with_progress | Integration | Failed | `backend/tests/integration/test_ingest_run_acceptance.py` |
-| NFR-023 | test_nfr023_the_supplied_formats_are_read_as_they_are | Integration | Failed | `backend/tests/integration/test_ingest_run_acceptance.py` |
+| AC-001 | test_ac001_every_required_file_type_is_loaded_with_per_file_row_counts | Integration | Passed | `backend/tests/integration/test_ingest_run_acceptance.py` |
+| AC-002 | test_ac002_the_report_carries_version_seed_patient_count_and_a_pass_line_per_file | Integration | Passed | `backend/tests/integration/test_ingest_run_acceptance.py` |
+| AC-003 | test_ac003_a_file_missing_a_required_column_fails_and_is_named_with_that_column | Integration | Passed | `backend/tests/integration/test_ingest_run_acceptance.py` |
+| AC-004, NFR-021 | test_ac004_nfr021_re_running_replaces_the_prior_load_without_duplicates | Integration | Passed | `backend/tests/integration/test_ingest_run_acceptance.py` |
+| NFR-005 | test_nfr005_the_loaded_cohort_is_served_from_the_database_not_the_raw_files | Integration | Passed | `backend/tests/integration/test_ingest_run_acceptance.py` |
+| NFR-006 | test_nfr006_ingest_runs_as_a_background_job_with_progress | Integration | Passed | `backend/tests/integration/test_ingest_run_acceptance.py` |
+| NFR-023 | test_nfr023_the_supplied_formats_are_read_as_they_are | Integration | Passed | `backend/tests/integration/test_ingest_run_acceptance.py` |
 | AC-001 | test_ac001_a_start_without_a_dataset_version_is_422 | Integration | Passed | `backend/tests/integration/test_ingest_run_access.py` |
 | AC-001 | test_ac001_starting_a_run_requires_a_bearer_token | Integration | Passed | `backend/tests/integration/test_ingest_run_access.py` |
 | AC-002 | test_ac002_an_unknown_run_id_is_404 | Integration | Passed | `backend/tests/integration/test_ingest_run_access.py` |
@@ -120,7 +120,7 @@ Acceptance criteria covered: 24/146 · passing: 16/146
 | Criteria | Test | Level | Result | File |
 |---|---|---|---|---|
 | AC-144 | test_ac144_health_reports_ok_and_the_services_it_depends_on | Integration | Passed | `backend/tests/integration/test_deployment_access_and_settings.py` |
-| AC-144 | test_ac144_settings_reports_the_latest_passed_runs_dataset_version | Integration | Failed | `backend/tests/integration/test_deployment_access_and_settings.py` |
+| AC-144 | test_ac144_settings_reports_the_latest_passed_runs_dataset_version | Integration | Passed | `backend/tests/integration/test_deployment_access_and_settings.py` |
 | AC-145, NFR-011 | test_ac145_nfr011_settings_never_contains_a_credential_value | Integration | Passed | `backend/tests/integration/test_deployment_access_and_settings.py` |
 | AC-145, NFR-011 | test_ac145_nfr011_settings_reports_connected_for_configured_credentials | Integration | Passed | `backend/tests/integration/test_deployment_access_and_settings.py` |
 | AC-146 | test_ac146_health_succeeds_unauthenticated | Integration | Passed | `backend/tests/integration/test_deployment_access_and_settings.py` |
@@ -163,9 +163,9 @@ Acceptance criteria covered: 24/146 · passing: 16/146
 | AC-007 | test_ac007_a_row_missing_a_provenance_field_names_the_event_and_the_field[source_ref] | Unit | Passed | `backend/tests/unit/test_ingest_provenance.py` |
 | AC-007 | test_ac007_a_row_missing_a_provenance_field_names_the_event_and_the_field[source_type] | Unit | Passed | `backend/tests/unit/test_ingest_provenance.py` |
 | AC-007 | test_ac007_the_report_exposes_provenance_failures_beside_the_row_counts | Unit | Passed | `backend/tests/unit/test_ingest_provenance.py` |
-| AC-005 | test_ac005_every_stored_event_the_api_exposes_carries_all_sixteen_provenance_fields | Integration | Failed | `backend/tests/integration/test_provenance.py` |
-| AC-006 | test_ac006_an_event_source_ref_resolves_to_the_matching_note_text | Integration | Failed | `backend/tests/integration/test_provenance.py` |
-| AC-007 | test_ac007_rows_missing_source_ref_or_source_type_fail_provenance_and_are_not_retrievable | Integration | Failed | `backend/tests/integration/test_provenance.py` |
+| AC-005 | test_ac005_every_stored_event_the_api_exposes_carries_all_sixteen_provenance_fields | Integration | Passed | `backend/tests/integration/test_provenance.py` |
+| AC-006 | test_ac006_an_event_source_ref_resolves_to_the_matching_note_text | Integration | Passed | `backend/tests/integration/test_provenance.py` |
+| AC-007 | test_ac007_rows_missing_source_ref_or_source_type_fail_provenance_and_are_not_retrievable | Integration | Passed | `backend/tests/integration/test_provenance.py` |
 
 ### US-007: Hold all condition logic in one declarative pack
 
@@ -288,6 +288,122 @@ Acceptance criteria covered: 24/146 · passing: 16/146
 | AC-104 | test_ac104_an_invited_account_cannot_log_in_until_it_sets_a_password | Integration | Passed | `backend/tests/unit/test_auth_sessions.py` |
 | AC-104 | test_ac104_creating_a_user_is_401_unauthenticated_and_403_for_a_clinician | Integration | Passed | `backend/tests/unit/test_auth_sessions.py` |
 
+## Sprint 3
+
+### US-003: Quarantine ground-truth labels away from the engine
+
+| Criteria | Test | Level | Result | File |
+|---|---|---|---|---|
+| AC-010 | test_ac010_the_case_read_states_no_ground_truth_field | Unit | Passed | `backend/tests/unit/test_case_timeline_cutoff.py` |
+| AC-029 | test_ac029_a_patient_with_no_label_row_states_a_null_cutoff | Unit | Passed | `backend/tests/unit/test_case_timeline_cutoff.py` |
+| AC-029 | test_ac029_the_case_read_states_the_patients_evaluation_cutoff | Unit | Passed | `backend/tests/unit/test_case_timeline_cutoff.py` |
+| AC-009 | test_ac009_both_allowed_modules_do_name_the_accessor | Unit | Passed | `backend/tests/unit/test_evaluation_scan.py` |
+| AC-009 | test_ac009_ground_truth_is_read_only_by_the_labels_store_and_the_evaluation_module | Unit | Passed | `backend/tests/unit/test_evaluation_scan.py` |
+| AC-009 | test_ac009_the_scan_reports_the_file_and_line_of_a_hit | Unit | Passed | `backend/tests/unit/test_evaluation_scan.py` |
+| AC-008 | test_ac008_ingest_loads_labels_into_the_label_store | Unit | Passed | `backend/tests/unit/test_labels_store.py` |
+| AC-008 | test_ac008_re_running_ingest_replaces_the_label_load | Unit | Passed | `backend/tests/unit/test_labels_store.py` |
+| AC-008 | test_ac008_the_operational_accessor_returns_only_the_two_permitted_keys | Unit | Passed | `backend/tests/unit/test_labels_store.py` |
+| AC-009 | test_ac009_the_evaluation_accessor_returns_the_ground_truth_columns | Unit | Passed | `backend/tests/unit/test_labels_store.py` |
+| AC-010 | test_ac010_asking_for_a_ground_truth_field_raises | Unit | Passed | `backend/tests/unit/test_labels_store.py` |
+| AC-010 | test_ac010_the_allowlist_is_a_module_level_constant | Unit | Passed | `backend/tests/unit/test_labels_store.py` |
+| AC-010 | test_ac010_the_single_field_accessor_answers_for_a_permitted_field | Unit | Passed | `backend/tests/unit/test_labels_store.py` |
+| AC-010 | test_ac010_the_single_field_accessor_refuses_a_ground_truth_field | Unit | Passed | `backend/tests/unit/test_labels_store.py` |
+| AC-008 | test_ac008_no_input_set_carries_a_ground_truth_key_under_any_name | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-008 | test_ac008_the_scan_finds_a_ground_truth_key_wherever_it_hides | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-027 | test_ac027_a_patient_with_no_cutoff_keeps_todays_behaviour | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-027 | test_ac027_an_item_dated_exactly_on_the_cutoff_is_excluded | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-027 | test_ac027_the_boundary_helper_is_strictly_before_the_cutoff | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-027 | test_ac027_the_undated_family_history_row_is_included | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-028 | test_ac028_a_confirmed_case_shows_neither_its_diagnosis_nor_its_workup | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-029 | test_ac029_a_seeded_leaking_patient_yields_a_non_empty_violation_list | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-029 | test_ac029_the_guardrail_passes_over_a_clean_cohort | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-029 | test_ac029_the_whole_cohort_passes_once_the_filter_is_in_place | Unit | Passed | `backend/tests/unit/test_leakage_inputs.py` |
+| AC-008, NFR-013 | test_ac008_nfr013_no_ground_truth_field_reaches_any_rendered_patient_payload | Integration | Passed | `backend/tests/integration/test_leakage_guarantee.py` |
+| AC-008 | test_ac008_the_patients_own_screens_carry_no_ground_truth | Integration | Passed | `backend/tests/integration/test_leakage_guarantee.py` |
+| AC-009 | test_ac009_the_evaluation_report_still_reports_sensitivity_and_ppv | Integration | Passed | `backend/tests/integration/test_leakage_guarantee.py` |
+| AC-010 | test_ac010_only_the_cutoff_and_the_split_reach_the_engine_or_the_demo_path | Integration | Passed | `backend/tests/integration/test_leakage_guarantee.py` |
+| AC-010 | test_ac010_the_operational_accessor_refuses_a_ground_truth_field | Integration | Passed | `backend/tests/integration/test_leakage_guarantee.py` |
+| AC-028 | test_ac028_a_confirmed_case_shows_neither_its_diagnosis_nor_its_workup | Integration | Passed | `backend/tests/integration/test_leakage_guarantee.py` |
+| AC-029 | test_ac029_an_item_dated_exactly_on_the_cutoff_is_excluded | Integration | Passed | `backend/tests/integration/test_leakage_guarantee.py` |
+| AC-029, NFR-013 | test_ac029_nfr013_no_rendered_read_of_any_patient_carries_a_post_cutoff_item | Integration | Passed | `backend/tests/integration/test_leakage_guarantee.py` |
+| AC-029, NFR-013 | test_ac029_nfr013_the_undated_family_history_row_is_the_one_allowed_exception | Integration | Passed | `backend/tests/integration/test_leakage_guarantee.py` |
+| AC-009 | test_ac009_a_perfect_cohort_scores_one_on_both_measures | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+| AC-009 | test_ac009_an_undefined_measure_is_none_rather_than_zero | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+| AC-009 | test_ac009_ground_truth_is_read_through_the_evaluation_only_accessor | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+| AC-009 | test_ac009_sensitivity_and_ppv_are_computed_over_the_seeded_cohort | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+| AC-009 | test_ac009_staff_get_sensitivity_ppv_the_split_and_the_synthetic_notice | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+| AC-009 | test_ac009_the_response_carries_no_per_patient_ground_truth_value | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+| AC-009 | test_ac009_the_route_is_401_unauthenticated | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+| AC-009 | test_ac009_the_route_is_403_for_a_patient_token | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+| — | test_the_report_names_a_mixed_cohort_rather_than_one_of_its_splits | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+| — | test_the_report_states_the_cohort_split_it_evaluated_on | Integration | Passed | `backend/tests/unit/test_evaluation_report.py` |
+
+### US-004: De-duplicate EHR and claim views of the same encounter
+
+| Criteria | Test | Level | Result | File |
+|---|---|---|---|---|
+| AC-011 | test_ac011_a_merged_encounter_counts_as_one_visit | Unit | Passed | `backend/tests/unit/test_encounter_dedup.py` |
+| AC-011 | test_ac011_a_near_in_time_claim_with_the_same_code_merges | Unit | Passed | `backend/tests/unit/test_encounter_dedup.py` |
+| AC-011 | test_ac011_grouping_keys_are_server_generated_uuids | Unit | Passed | `backend/tests/unit/test_encounter_dedup.py` |
+| AC-011 | test_ac011_merge_items_never_invents_an_entry_without_a_source_row | Unit | Passed | `backend/tests/unit/test_encounter_dedup.py` |
+| AC-011 | test_ac011_the_merge_is_safe_to_run_twice | Unit | Passed | `backend/tests/unit/test_encounter_dedup.py` |
+| AC-011 | test_ac011_two_ehr_rows_are_never_merged_with_each_other | Unit | Passed | `backend/tests/unit/test_encounter_dedup.py` |
+| AC-011 | test_ac011_two_genuinely_separate_visits_stay_two_entries | Unit | Passed | `backend/tests/unit/test_encounter_dedup.py` |
+| AC-011 | test_ac011_two_source_rows_of_one_encounter_become_one_entry | Unit | Passed | `backend/tests/unit/test_encounter_dedup.py` |
+| AC-004 | Admin de-duplication panel > [AC-004-3] a 403 on the job read shows the API's detail and no credential value | Unit | Passed | `frontend/src/screens/AdminDedup.test.tsx` |
+| AC-004 | Admin de-duplication panel > [AC-004-3] a 404 on the job read shows the API's detail | Unit | Passed | `frontend/src/screens/AdminDedup.test.tsx` |
+| AC-004 | Admin de-duplication panel > [AC-004-3] a failed job shows a readable message, not a blank panel | Unit | Passed | `frontend/src/screens/AdminDedup.test.tsx` |
+| AC-004 | Admin de-duplication panel > [AC-004-3] starts the job with kind dedup_check and shows progress while it runs | Unit | Passed | `frontend/src/screens/AdminDedup.test.tsx` |
+| AC-004, AC-013 | Admin de-duplication panel > [AC-004-3][AC-013] a finished job renders the four counts with thousands separators | Unit | Passed | `frontend/src/screens/AdminDedup.test.tsx` |
+| AC-002 | Admin ingest summary totals > [AC-002] a finished run reports loaded, rejected and passed totals once, consistently | Unit | Passed | `frontend/src/screens/AdminDedup.test.tsx` |
+| AC-011 | test_ac011_an_encounter_in_both_sources_is_one_entry_tagged_with_both | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-011 | test_ac011_the_merged_encounter_is_counted_once_in_a_visit_count_signal | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-012 | test_ac012_an_unknown_job_id_is_404 | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-012 | test_ac012_an_unknown_job_kind_is_422 | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-012 | test_ac012_the_check_runs_as_a_job_and_reports_matched_split_and_merged_in_error | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-012 | test_ac012_the_job_reports_its_kind_and_progress_while_it_runs | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-012 | test_ac012_the_job_routes_are_401_unauthenticated | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-012 | test_ac012_the_job_routes_are_403_for_a_patient_token | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-012 | test_ac012_the_report_names_the_dataset_version_it_checked | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-013 | test_ac013_an_encounter_in_no_source_is_counted_as_invisible_care | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-013 | test_ac013_invisible_care_is_never_drawn_in_a_timeline_case_view_or_export | Integration | Passed | `backend/tests/integration/test_dedup_check.py` |
+| AC-012 | test_ac012_an_unknown_job_id_is_404 | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+| AC-012 | test_ac012_an_unknown_kind_is_422 | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+| AC-012 | test_ac012_queueing_the_check_is_202_with_job_id_kind_and_status | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+| AC-012 | test_ac012_the_check_counts_matched_split_and_merged_in_error | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+| AC-012 | test_ac012_the_check_is_safe_to_run_twice | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+| AC-012 | test_ac012_the_job_routes_are_401_unauthenticated | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+| AC-012 | test_ac012_the_job_routes_are_403_for_a_non_admin_token | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+| AC-012 | test_ac012_the_queued_job_reports_its_kind_status_progress_and_result | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+| AC-013 | test_ac013_an_encounter_in_no_source_is_counted_as_invisible_care | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+| AC-013 | test_ac013_invisible_care_is_never_created_as_a_timeline_entry | Integration | Passed | `backend/tests/unit/test_dedup_check.py` |
+
+### US-017: Configure the LLM credential as deployment configuration
+
+| Criteria | Test | Level | Result | File |
+|---|---|---|---|---|
+| AC-057 | Admin settings credential panel > [AC-057] a 403 on the settings call renders a readable message, not a blank panel | Unit | Passed | `frontend/src/screens/AdminSettings.test.tsx` |
+| AC-057 | Admin settings credential panel > [AC-057] a configured deployment reads Connected for both the LLM and the database | Unit | Passed | `frontend/src/screens/AdminSettings.test.tsx` |
+| AC-057 | Admin settings credential panel > [AC-057] an unconfigured deployment reads Not configured for both and shows no value | Unit | Passed | `frontend/src/screens/AdminSettings.test.tsx` |
+| AC-057 | Admin settings credential panel > [AC-057] the LLM credential is a masked placeholder labelled as deployment configuration | Unit | Passed | `frontend/src/screens/AdminSettings.test.tsx` |
+| AC-056, NFR-011 | test_ac056_nfr011_no_log_line_written_while_serving_the_settings_page_carries_it | Integration | Passed | `backend/tests/integration/test_llm_credential_configuration.py` |
+| AC-056, NFR-011 | test_ac056_nfr011_no_screen_payload_carries_the_llm_credential_value | Integration | Passed | `backend/tests/integration/test_llm_credential_configuration.py` |
+| AC-056, NFR-011 | test_ac056_nfr011_the_llm_credential_is_read_from_deployment_configuration | Integration | Passed | `backend/tests/integration/test_llm_credential_configuration.py` |
+| AC-056, NFR-011 | test_ac056_nfr011_the_llm_credential_value_is_in_no_file_in_source_control | Integration | Passed | `backend/tests/integration/test_llm_credential_configuration.py` |
+| AC-057, NFR-011 | test_ac057_nfr011_an_unconfigured_credential_reads_not_configured | Integration | Passed | `backend/tests/integration/test_llm_credential_configuration.py` |
+| AC-057, NFR-011 | test_ac057_nfr011_the_settings_page_never_names_a_credential_environment_value | Integration | Passed | `backend/tests/integration/test_llm_credential_configuration.py` |
+| AC-057, NFR-011 | test_ac057_nfr011_the_settings_page_shows_a_masked_placeholder_and_connected | Integration | Passed | `backend/tests/integration/test_llm_credential_configuration.py` |
+| AC-057 | test_ac057_the_status_is_only_ever_connected_or_not_configured | Integration | Passed | `backend/tests/integration/test_llm_credential_configuration.py` |
+| AC-056 | test_ac056_a_deliberately_logged_key_is_redacted | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+| AC-056 | test_ac056_exception_text_from_a_failed_anthropic_call_is_redacted | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+| AC-056 | test_ac056_llm_api_key_is_accepted_as_the_generic_name | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+| AC-056 | test_ac056_no_credential_value_is_committed_anywhere_in_the_repository | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+| AC-056 | test_ac056_the_credential_is_read_from_anthropic_api_key_at_call_time | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+| AC-056 | test_ac056_the_database_connection_string_is_redacted_the_same_way | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+| AC-056 | test_ac056_there_is_no_default_or_placeholder_credential | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+| AC-057, NFR-011 | test_ac057_nfr011_settings_mask_both_credentials_and_report_their_status | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+| AC-057 | test_ac057_settings_report_not_configured_with_no_llm_credential | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+
 ## Project setup
 
 | Criteria | Test | Level | Result | File |
@@ -295,6 +411,8 @@ Acceptance criteria covered: 24/146 · passing: 16/146
 | — | test_is_idempotent_and_never_rehashes_an_existing_users_password | Unit | Passed | `backend/tests/unit/test_bootstrap.py` |
 | — | test_seeds_nothing_when_no_platform_variables_are_set | Unit | Passed | `backend/tests/unit/test_bootstrap.py` |
 | — | test_seeds_the_admin_and_smoke_test_users_from_exactly_those_names | Unit | Passed | `backend/tests/unit/test_bootstrap.py` |
+| AC-004 | test_ac004_a_rerun_purges_a_patient_that_already_has_an_invite_and_a_decision | Unit | Passed | `backend/tests/unit/test_ingest_purge.py` |
+| AC-004 | test_ac004_a_run_that_cannot_purge_is_reported_failed_not_left_running | Unit | Passed | `backend/tests/unit/test_ingest_purge.py` |
 | — | test_a_guardrail_result_is_ok_only_with_no_violations | Unit | Passed | `backend/tests/unit/test_scaffolding.py` |
 | — | test_allowed_origins_falls_back_to_the_dev_server | Unit | Passed | `backend/tests/unit/test_scaffolding.py` |
 | — | test_allowed_origins_reads_a_comma_separated_list | Unit | Passed | `backend/tests/unit/test_scaffolding.py` |
@@ -325,5 +443,10 @@ Acceptance criteria covered: 24/146 · passing: 16/146
 | AC-101, AC-102 | App > [AC-101][AC-102] sends a clinician route to sign-in when no session is held | Unit | Passed | `frontend/src/App.test.tsx` |
 | — | test_health_reports_ok | Integration | Passed | `backend/tests/integration/test_health.py` |
 | — | test_the_openapi_document_builds | Integration | Passed | `backend/tests/integration/test_health.py` |
+| — | test_a_run_started_moments_ago_is_trusted_before_its_job_reaches_the_queue | Integration | Passed | `backend/tests/unit/test_ingest_run_liveness.py` |
+| — | test_an_orphaned_run_does_not_block_a_new_start_and_is_closed_off[queued] | Integration | Passed | `backend/tests/unit/test_ingest_run_liveness.py` |
+| — | test_an_orphaned_run_does_not_block_a_new_start_and_is_closed_off[running] | Integration | Passed | `backend/tests/unit/test_ingest_run_liveness.py` |
+| — | test_an_unreadable_queue_falls_back_to_the_age_of_the_row | Integration | Passed | `backend/tests/unit/test_ingest_run_liveness.py` |
+| NFR-021 | test_nfr021_a_run_whose_job_is_still_on_the_queue_is_a_409 | Integration | Passed | `backend/tests/unit/test_ingest_run_liveness.py` |
 | — | the app loads | E2E | Not run yet | `frontend/e2e/example.spec.ts` |
 <!-- sdlc:auto:end tests -->
