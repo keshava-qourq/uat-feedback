@@ -162,8 +162,7 @@ def timeline_items(api: TestClient, admin: dict[str, str], patient_uuid: str) ->
     )
     items = response.json().get("items")
     assert isinstance(items, list), (
-        f"the case timeline for patient {patient_uuid} carries no items list: "
-        f"{response.text[:300]}"
+        f"the case timeline for patient {patient_uuid} carries no items list: {response.text[:300]}"
     )
     return items
 

@@ -114,8 +114,7 @@ def test_ac011_the_merged_encounter_is_counted_once_in_a_visit_count_signal(
 
     response = api.get(f"/api/cases/{patient}/timeline", headers=admin)
     assert response.status_code == 200, (
-        f"GET /api/cases/{patient}/timeline returned {response.status_code}: "
-        f"{response.text[:300]}"
+        f"GET /api/cases/{patient}/timeline returned {response.status_code}: {response.text[:300]}"
     )
     payload = response.json()
     items = payload.get("items") or []
@@ -292,8 +291,7 @@ def _patient_token(api: TestClient) -> str:
     )
     response = api.post("/api/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200, (
-        f"the patient-role account cannot sign in: {response.status_code} "
-        f"{response.text[:200]}"
+        f"the patient-role account cannot sign in: {response.status_code} {response.text[:200]}"
     )
     body = response.json()
     role = str((body.get("user") or {}).get("role", "patient"))
@@ -336,8 +334,7 @@ def test_ac012_the_job_routes_are_403_for_a_patient_token(api: TestClient) -> No
 
     read = api.get(f"{JOBS}/{uuid.uuid4()}", headers=headers)
     assert read.status_code == 403, (
-        f"GET {JOBS}/{{job_id}} with a patient token returned {read.status_code}: "
-        f"{read.text[:200]}"
+        f"GET {JOBS}/{{job_id}} with a patient token returned {read.status_code}: {read.text[:200]}"
     )
     assert set(read.json()) == {"detail"}
 
@@ -359,7 +356,6 @@ def test_ac012_an_unknown_job_kind_is_422(api: TestClient) -> None:
     response = api.post(JOBS, headers=admin, json={"kind": f"not-a-kind-{uuid.uuid4().hex[:6]}"})
 
     assert response.status_code == 422, (
-        f"POST {JOBS} with an unknown kind returned {response.status_code}: "
-        f"{response.text[:200]}"
+        f"POST {JOBS} with an unknown kind returned {response.status_code}: {response.text[:200]}"
     )
     assert set(response.json()) == {"detail"}
