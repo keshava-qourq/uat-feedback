@@ -389,3 +389,9 @@ class PackChangeLog(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     change_summary: Mapped[dict | None] = mapped_column(JSONB_OR_JSON, nullable=True)
+
+
+# The evaluation-only label store's table is declared in `app.labels`, the one
+# module permitted to touch it (US-003). Imported here only so the table is
+# registered on `Base.metadata` wherever the models are.
+from app import labels as _labels  # noqa: E402,F401

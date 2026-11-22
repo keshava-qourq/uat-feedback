@@ -39,6 +39,7 @@ import pandas as pd
 from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
 
+from app import labels
 from app.database import SessionLocal
 from app.ingest.source import list_source_files, open_source_file
 from app.models import (
@@ -309,16 +310,31 @@ def _persona_row(row: dict, _version: str, ids: dict[str, str]) -> dict:
     }
 
 
-def _label_row(row: dict, _version: str, ids: dict[str, str]) -> None:
-    """labels.csv has no table of its own yet: its rows are validated and counted.
+def _optional_boolean(value: Any) -> bool | None:
+    text = _text(value)
+    if text is None:
+        return None
+    return text.lower() in {"true", "t", "1", "yes", "y"}
 
-    The split/archetype/cutoff columns belong to the case and evaluation
-    tickets; validating them here still means a malformed labels.csv fails the
-    run rather than being discovered much later.
+
+def _label_row(row: dict, version: str, ids: dict[str, str]) -> dict:
+    """One row of labels.csv, bound for the evaluation-only label store.
+
+    Only `app.labels` reads these columns back: `eval_cutoff_date` and `split`
+    operationally, the rest through the evaluation-only accessor (US-003).
     """
-    _patient_id(row, ids)
-    _required_text(row.get("split"), "split")
-    return None
+    return {
+        "id": str(uuid.uuid4()),
+        "patient_id": _patient_id(row, ids),
+        "dataset_version": version,
+        "split": _required_text(row.get("split"), "split"),
+        "eval_cutoff_date": _date(row.get("eval_cutoff_date"), "eval_cutoff_date"),
+        "archetype": _text(row.get("archetype")),
+        "typicality": _text(row.get("typicality")),
+        "clue_density": _number(row.get("clue_density"), "clue_density"),
+        "hla_b27_true": _optional_boolean(row.get("hla_b27_true")),
+        "axspa_label": _optional_boolean(row.get("axspa_label")),
+    }
 
 
 # ----------------------------------------------------------------- bulk FHIR rows
@@ -452,6 +468,8 @@ def fhir_files_present(source_uri: str) -> list[str]:
 #: file -> (model or None, row builder)
 _LOADERS: dict[str, tuple[Any, Callable[[dict, str, dict[str, str]], dict | None]]] = {
     "patients.csv": (Patient, _patient_row),
+    # No model: the label rows are handed to `app.labels`, the one module
+    # permitted to touch the patient_labels table (AC-009/010).
     "labels.csv": (None, _label_row),
     "events.csv": (Event, _event_row),
     "notes.csv": (Note, _note_row),
@@ -572,6 +590,9 @@ def _purge(db: Session, dataset_version: str) -> None:
     which fails the whole job and leaves its run stuck in `running`.
     """
     patient_ids = select(Patient.id).where(Patient.dataset_version == dataset_version)
+    # The label store is purged through its own module: nothing else may
+    # touch that table (AC-009/010).
+    labels.purge(db, dataset_version)
     for model in (
         Persona,
         IntakeAnswer,
@@ -639,7 +660,11 @@ def _load_file(
                     if built is not None:
                         mappings.append(built)
                     loaded += 1
-                if mappings and model is not None:
+                if mappings and file_name == "labels.csv":
+                    # The label store is written through its own module, the
+                    # only one allowed to touch that table (AC-009/010).
+                    labels.insert_labels(db, mappings)
+                elif mappings and model is not None:
                     db.execute(insert(model), mappings)
                     if model is Patient:
                         for mapping in mappings:

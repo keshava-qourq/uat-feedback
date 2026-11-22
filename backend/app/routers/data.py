@@ -21,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.engine.inputs import cutoff_date, is_pre_cutoff
 from app.invites import worklist_invite_status
 from app.models import Decision, Event, IntakeAnswer, Note, Patient, Persona, User
 from app.notice import with_notice
@@ -59,13 +60,18 @@ def _my_patient(db: Session, user: User) -> Patient | None:
 
 
 def _timeline_items(db: Session, patient: Patient | None) -> list[dict[str, Any]]:
+    """One patient's items, oldest first, with nothing dated on or after their
+    evaluation cutoff (NFR-013, AC-028). The undated family-history row is the
+    one exception; a patient with no cutoff recorded is not filtered at all."""
     if patient is None:
         return []
+    cutoff = cutoff_date(db, patient.id)
     rows = list(
         db.execute(
             select(Event).where(Event.patient_id == patient.id).order_by(Event.event_time)
         ).scalars()
     )
+    rows = [row for row in rows if is_pre_cutoff(row.event_time, cutoff, row.event_type)]
     refs = {row.source_ref for row in rows if row.source_ref}
     notes: dict[str, Note] = {}
     if refs:
@@ -369,15 +375,27 @@ def case_timeline(patient_id: str, user: Staff, db: Db) -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"no patient {patient_id}"
         )
-    return with_notice({"patient_id": patient.id, "items": _timeline_items(db, patient)})
+    # The cutoff itself is an operational field (AC-010) and a plain date
+    # (behaviour rules): stating it lets the leakage check prove the read holds
+    # nothing dated on or after it (NFR-013, AC-029).
+    return with_notice(
+        {
+            "patient_id": patient.id,
+            "cutoff_date": _iso(cutoff_date(db, patient.id)),
+            "items": _timeline_items(db, patient),
+        }
+    )
 
 
 @router.get("/api/evaluation/runs/latest")
 def latest_evaluation(user: Staff, db: Db) -> dict[str, Any]:
-    """The latest evaluation run. Until the evaluation job exists there is none,
-    and the report says so -- with the notice, because its numbers come from
-    the same synthetic cohort."""
-    return with_notice({"run": None, "metrics": [], "cohort": "synthetic"})
+    """The latest evaluation report: sensitivity and PPV over the loaded
+    cohort, with the notice, because its numbers come from the same synthetic
+    cohort (AC-009). Staff only; the numbers are aggregates, never a
+    patient's label."""
+    from app.evaluation import latest_report
+
+    return with_notice(latest_report(db))
 
 
 @router.get("/api/cases/{patient_id}/referral-packet.pdf")
