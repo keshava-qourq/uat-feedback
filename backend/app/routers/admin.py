@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app import jobs
 from app.auth import require_admin, require_api_access
+from app.config import database_url_configured, llm_configured
 from app.database import get_db
 from app.dataset import active_dataset_version
 from app.dedup_check import run_dedup_check
@@ -44,11 +45,10 @@ MASKED = "not-shown"
 @router.get("/settings")
 def settings(db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
     """Masked configuration status: never a credential value, only a status."""
-    database = CONNECTED if os.getenv("DATABASE_URL") and database_reachable() else NOT_CONFIGURED
-    llm_configured = any(
-        (os.getenv(name) or "").strip() for name in ("ANTHROPIC_API_KEY", "LLM_API_KEY")
-    )
-    llm = CONNECTED if llm_configured else NOT_CONFIGURED
+    database = CONNECTED if database_url_configured() and database_reachable() else NOT_CONFIGURED
+    # Read through app.config at call time; the value itself never enters the
+    # response, a log line or a variable that outlives this check (NFR-011).
+    llm = CONNECTED if llm_configured() else NOT_CONFIGURED
     return {
         "database": {"status": database},
         "llm": {"status": llm},

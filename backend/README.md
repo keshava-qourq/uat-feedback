@@ -60,7 +60,7 @@ See `../ENVIRONMENT.md` for the connection examples.
 | `DATABASE_URL` | SQLAlchemy URL of PostgreSQL 16 (`postgresql+psycopg://...`). |
 | `REDIS_URL` | Redis 7, used as both the read cache and the job queue. |
 | `S3_BUCKET`, `AWS_REGION` | The project's S3 bucket. Unset locally: files go under `MEDIA_ROOT`. |
-| `ANTHROPIC_API_KEY` | Claude, for clue extraction and cited text. Absent: the app degrades to structured-only output and reports "not configured". |
+| `ANTHROPIC_API_KEY` | Claude, for clue extraction and cited text. `LLM_API_KEY` is accepted as the generic name for the same credential. Supplied as deployment configuration only, never committed; absent, the app degrades to structured-only output and reports "not-configured". |
 | `SENDGRID_API_KEY` | Outbound invite and password-set mail. Absent: an invite is still issued, just not emailed. |
 
 ### Seeded accounts

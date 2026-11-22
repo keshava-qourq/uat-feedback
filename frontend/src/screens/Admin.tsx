@@ -390,6 +390,7 @@ function AdminScreen() {
   const settings = useQuery({
     queryKey: ["admin-settings"],
     queryFn: () => apiFetch("/api/admin/settings"),
+    retry: false,
   });
 
   const report = useQuery({
@@ -764,7 +765,8 @@ function AdminScreen() {
           {settings.isError ? (
             <p className="err" role="status">
               <Icons.AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" /> Could not read
-              the connection settings.
+              the connection settings.{" "}
+              {settings.error?.message ? settings.error.message : "Try again."}
             </p>
           ) : settings.isLoading ? (
             <p className="small muted" style={{ margin: 0, textAlign: "center" }}>

@@ -18,6 +18,7 @@ from app.auth import is_authenticated_request
 from app.bootstrap import seed_bootstrap_accounts
 from app.config import allowed_origins
 from app.database import Base, SessionLocal, engine
+from app.log_redaction import install_credential_filter
 from app.pack import log_active_pack
 from app.routers import admin, auth, data, ingest_runs, invites, pack
 from app.services import configured_services
@@ -34,6 +35,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     deployment whose `DATABASE_URL` names a server that is not up fails where you can
     read the error, not while pytest collects the files.
     """
+    # Before anything else can log: no credential value may ever reach a log
+    # line, including exception text from a failed Anthropic call (NFR-011).
+    install_credential_filter()
     Base.metadata.create_all(bind=engine)
     # BOOTSTRAP_ADMIN_* / SMOKE_TEST_* are unset locally and in the unit-test run, so
     # this seeds nothing there -- see app.bootstrap for exactly what it seeds and why.
