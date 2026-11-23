@@ -3,6 +3,15 @@
 > Maintained by QuorQ AI SDLC. Text between `sdlc:auto` markers is regenerated; anything outside them is yours and is kept.
 
 <!-- sdlc:auto:start releases -->
+## 5f7e38c9ddea — 2026-11-23
+
+**Commit:** `5f7e38c`
+
+**Delivered:**
+- US-010: Evaluate ASAS referral criteria and SPARTAN points
+- US-015: Extract buried clues from notes and imaging reports with a quoted source
+- US-034: Block post-cutoff data from scoring and display
+
 ## f1ada6c52759 — 2026-11-22
 
 **Commit:** `f1ada6c`
