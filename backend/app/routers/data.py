@@ -23,11 +23,13 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dedup import group_rows, merge_items
 from app.engine.inputs import cutoff_date, is_pre_cutoff
+from app.extraction_report import finding_evidence
 from app.invites import worklist_invite_status
 from app.models import Decision, Event, IntakeAnswer, Note, Patient, Persona, User
 from app.notice import with_notice
 from app.pack import get_active_pack
 from app.pdf import render_pdf
+from app.provenance import resolve_source_ref
 from app.sessions import CurrentUser, require_staff
 
 router = APIRouter(tags=["data"])
@@ -38,6 +40,15 @@ Staff = Annotated[User, Depends(require_staff)]
 
 def _iso(value: Any) -> str | None:
     return None if value is None else value.isoformat()
+
+
+def _patient_or_404(db: Session, patient_id: str) -> Patient:
+    patient = db.get(Patient, patient_id)
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"no patient {patient_id}"
+        )
+    return patient
 
 
 def _history_lines(items: list[dict[str, Any]]) -> list[str]:
@@ -393,12 +404,40 @@ def case_read(patient_id: str, user: Staff, db: Db) -> dict[str, Any]:
     """
     from app.engine.criteria import evaluate_case
 
-    patient = db.get(Patient, patient_id)
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"no patient {patient_id}"
-        )
-    return with_notice(evaluate_case(db, patient.id))
+    patient = _patient_or_404(db, patient_id)
+    body = evaluate_case(db, patient.id)
+    # Findings the clue extractor drew out of this patient's notes, as
+    # evidence: each carries its quoted sentence and a link to the full
+    # note, resolved through provenance (AC-051).
+    body["extracted_evidence"] = finding_evidence(db, patient.id)
+    return with_notice(body)
+
+
+@router.get("/api/cases/{patient_id}/evidence")
+def case_evidence(patient_id: str, user: Staff, db: Db) -> dict[str, Any]:
+    """The extracted findings used as evidence for one patient (AC-051)."""
+    patient = _patient_or_404(db, patient_id)
+    return with_notice({"patient_id": patient.id, "evidence": finding_evidence(db, patient.id)})
+
+
+@router.get("/api/cases/{patient_id}/notes/{source_ref:path}")
+def case_note(patient_id: str, source_ref: str, user: Staff, db: Db) -> dict[str, Any]:
+    """The full note an evidence item links to, resolved by its source_ref."""
+    patient = _patient_or_404(db, patient_id)
+    record = resolve_source_ref(db, source_ref, patient.id)
+    if not record.found:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"no note {source_ref}")
+    if not is_pre_cutoff(record.note_time, cutoff_date(db, patient.id)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"no note {source_ref}")
+    return with_notice(
+        {
+            "patient_id": patient.id,
+            "source_ref": record.source_ref,
+            "note_type": record.note_type,
+            "note_time": _iso(record.note_time),
+            "text": record.note_text,
+        }
+    )
 
 
 @router.get("/api/cases/{patient_id}/timeline")

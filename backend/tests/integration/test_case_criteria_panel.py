@@ -115,8 +115,7 @@ def asas_keys(criteria: dict[str, Any]) -> list[str]:
     found = [
         key
         for key, value in criteria.items()
-        if isinstance(value, dict)
-        and "asas" in f"{key} {value.get('label', '')}".lower()
+        if isinstance(value, dict) and "asas" in f"{key} {value.get('label', '')}".lower()
     ]
     assert found, f"the active pack declares no ASAS criterion: {sorted(criteria)}"
     return found
@@ -184,8 +183,7 @@ def spartan_total_block(payload: Any) -> dict:
         candidates = [
             obj
             for obj in objects(payload)
-            if any(key in obj for key in TOTAL_KEYS)
-            and any(key in obj for key in THRESHOLD_KEYS)
+            if any(key in obj for key in TOTAL_KEYS) and any(key in obj for key in THRESHOLD_KEYS)
         ]
     assert candidates, (
         "the case read states no SPARTAN point total; AC-030 requires the total to be "
@@ -368,8 +366,7 @@ def test_ac032_an_unknown_criterion_states_what_would_answer_it(api: TestClient)
         item_key(item)
         for item in unknown
         if not any(
-            isinstance(item.get(key), str) and item.get(key, "").strip()
-            for key in NEEDED_KEYS
+            isinstance(item.get(key), str) and item.get(key, "").strip() for key in NEEDED_KEYS
         )
     ]
     assert not silent, (
@@ -472,6 +469,5 @@ def test_ac030_the_criteria_panel_is_part_of_the_case_read(api: TestClient, suff
         payload = response.json()
 
     assert criteria_items(payload), (
-        f"GET /api/cases/{patient_uuid}{suffix} carries no criteria panel: "
-        f"{str(payload)[:300]}"
+        f"GET /api/cases/{patient_uuid}{suffix} carries no criteria panel: {str(payload)[:300]}"
     )

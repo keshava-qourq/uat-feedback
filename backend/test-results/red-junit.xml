@@ -1,76 +1,266 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="6.521" timestamp="2026-11-16T18:10:03.587555+00:00" hostname="7cca21f5b9f5"><testcase classname="tests.integration.test_provenance" name="test_ac005_every_stored_event_the_api_exposes_carries_all_sixteen_provenance_fields" time="2.682"><failure message="AssertionError: no route exposed any of the events just ingested, so provenance on a stored event cannot be inspected; routes read: ['/api/demo/personas/prov-ada-9404897a/replay', '/api/patients/me/timeline', '/api/patients/me/updates', '/api/worklist', 'POST /api/demo/personas/prov-ada-9404897a/open']&#10;assert []">api = &lt;starlette.testclient.TestClient object at 0x7f26fd90f740&gt;
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="9" time="3.275" timestamp="2026-11-23T10:52:03.799097+00:00" hostname="8b8b6c89a19b"><testcase classname="tests.integration.test_clue_extraction" name="test_ac049_an_imaging_report_yields_a_finding_per_target_clue" time="2.541"><failure message="AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {&quot;detail&quot;:&quot;'extraction' is not a job kind; expected one of dedup_check&quot;}">api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
 
-    def test_ac005_every_stored_event_the_api_exposes_carries_all_sixteen_provenance_fields(
+    def test_ac049_an_imaging_report_yields_a_finding_per_target_clue(api: TestClient) -&gt; None:
+        """AC-049: run over an imaging report describing sacroiliac findings, the
+        extractor returns a structured finding for each of the pack's target clues --
+        sacroiliitis wording, iliac-side-only sclerosis, erosions present or absent,
+        and postpartum timing."""
+        admin = admin_headers(api)
+        drop = extraction_cohort(api, admin)
+        uuids = patient_uuids(api, admin, drop)
+&gt;       job = extraction_run(api, admin)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_clue_extraction.py:101: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/integration/extraction_support.py:224: in extraction_run
+    queued = start_extraction(api, admin)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+admin = {'Authorization': 'Bearer h5wsK8V2Gbghro5waMuZ9Q9EHXTQbhXQH2oRqS9Lu0U'}
+
+    def start_extraction(api: TestClient, admin: dict[str, str]) -&gt; dict:
+        """POST /api/admin/jobs {"kind": "extraction"} -&gt; 202 {job_id, kind, status}."""
+        response = api.post(JOBS, headers=admin, json={"kind": "extraction"})
+&gt;       assert response.status_code == 202, (
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            f"POST {JOBS} {{'kind': 'extraction'}} returned {response.status_code}, not 202: "
+            f"{response.text[:300]}"
+        )
+E       AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {"detail":"'extraction' is not a job kind; expected one of dedup_check"}
+
+tests/integration/extraction_support.py:184: AssertionError</failure></testcase><testcase classname="tests.integration.test_clue_extraction" name="test_ac049_each_finding_quotes_its_exact_sentence_and_names_the_note" time="0.138"><failure message="AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {&quot;detail&quot;:&quot;'extraction' is not a job kind; expected one of dedup_check&quot;}">api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+
+    def test_ac049_each_finding_quotes_its_exact_sentence_and_names_the_note(
         api: TestClient,
     ) -&gt; None:
-        """AC-005: after ingesting events.csv, every stored event the API hands out
-        carries patient_id, event_id, event_time, event_type, code_system, code,
-        display, value, unit, provider_org, provider_specialty, source_type,
-        source_ref, encounter_ref and confidence -- plus the load it came from."""
-        headers = admin_headers(api)
-        drop = ProvenanceDrop(uuid.uuid4().hex[:8])
-        report, version = _ingest(api, headers, drop)
-        assert str(report["run"]["status"]).lower() in {"succeeded", "success", "completed"}, (
-            f"the fixture drop did not ingest cleanly: {report['run']}"
-        )
-    
-        payloads = _read_payloads(api, headers, drop)
-        events = _event_objects(payloads, drop)
-&gt;       assert events, (
-            "no route exposed any of the events just ingested, so provenance on a stored "
-            f"event cannot be inspected; routes read: {sorted(payloads)}"
-        )
-E       AssertionError: no route exposed any of the events just ingested, so provenance on a stored event cannot be inspected; routes read: ['/api/demo/personas/prov-ada-9404897a/replay', '/api/patients/me/timeline', '/api/patients/me/updates', '/api/worklist', 'POST /api/demo/personas/prov-ada-9404897a/open']
-E       assert []
+        """AC-049: each finding carries the exact sentence it came from -- a sentence
+        of the note, not a paraphrase -- and the source_ref of that note."""
+        admin = admin_headers(api)
+        drop = extraction_cohort(api, admin)
+        uuids = patient_uuids(api, admin, drop)
+&gt;       job = extraction_run(api, admin)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/integration/test_provenance.py:198: AssertionError</failure></testcase><testcase classname="tests.integration.test_provenance" name="test_ac006_an_event_source_ref_resolves_to_the_matching_note_text" time="1.844"><failure message="AssertionError: following these event source_refs did not retrieve the matching notes.csv text through any read route: ['ehr:note:a41907f2:1', 'patient:note:a41907f2:2']; routes read: ['/api/demo/personas/prov-ada-a41907f2/replay', '/api/patients/me/timeline', '/api/patients/me/updates', '/api/worklist', 'POST /api/demo/personas/prov-ada-a41907f2/open']&#10;assert not ['ehr:note:a41907f2:1', 'patient:note:a41907f2:2']">api = &lt;starlette.testclient.TestClient object at 0x7f26fd90f740&gt;
+tests/integration/test_clue_extraction.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/integration/extraction_support.py:224: in extraction_run
+    queued = start_extraction(api, admin)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-    def test_ac006_an_event_source_ref_resolves_to_the_matching_note_text(api: TestClient) -&gt; None:
-        """AC-006: an event whose source_type is ehr or patient and whose source_ref
-        points at a note resolves, through the API, to that note's text in notes.csv
-        -- source_ref is the provenance join key."""
-        headers = admin_headers(api)
-        drop = ProvenanceDrop(uuid.uuid4().hex[:8])
-        report, _version = _ingest(api, headers, drop)
-        assert str(report["run"]["status"]).lower() in {"succeeded", "success", "completed"}, (
-            f"the fixture drop did not ingest cleanly: {report['run']}"
+api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+admin = {'Authorization': 'Bearer gkGhuhVtkUmWBjuEF_Z5LnXj2uMhUXScf-fqVl3NIqQ'}
+
+    def start_extraction(api: TestClient, admin: dict[str, str]) -&gt; dict:
+        """POST /api/admin/jobs {"kind": "extraction"} -&gt; 202 {job_id, kind, status}."""
+        response = api.post(JOBS, headers=admin, json={"kind": "extraction"})
+&gt;       assert response.status_code == 202, (
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            f"POST {JOBS} {{'kind': 'extraction'}} returned {response.status_code}, not 202: "
+            f"{response.text[:300]}"
         )
-    
-        payloads = _read_payloads(api, headers, drop)
-        unresolved: list[str] = []
-        for source_ref, text in drop.note_texts.items():
-            resolved = any(
-                source_ref in _strings(obj) and text in _strings(obj)
-                for payload in payloads.values()
-                for obj in _objects(payload)
-            )
-            if not resolved:
-                unresolved.append(source_ref)
-&gt;       assert not unresolved, (
-            "following these event source_refs did not retrieve the matching notes.csv "
-            f"text through any read route: {unresolved}; routes read: {sorted(payloads)}"
-        )
-E       AssertionError: following these event source_refs did not retrieve the matching notes.csv text through any read route: ['ehr:note:a41907f2:1', 'patient:note:a41907f2:2']; routes read: ['/api/demo/personas/prov-ada-a41907f2/replay', '/api/patients/me/timeline', '/api/patients/me/updates', '/api/worklist', 'POST /api/demo/personas/prov-ada-a41907f2/open']
-E       assert not ['ehr:note:a41907f2:1', 'patient:note:a41907f2:2']
+E       AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {"detail":"'extraction' is not a job kind; expected one of dedup_check"}
 
-tests/integration/test_provenance.py:265: AssertionError</failure></testcase><testcase classname="tests.integration.test_provenance" name="test_ac007_rows_missing_source_ref_or_source_type_fail_provenance_and_are_not_retrievable" time="1.840"><failure message="AssertionError: the ingest report carries no provenance_failures section: ['dataset_version', 'files', 'finished_at', 'patient_count', 'run', 'run_id', 'seed', 'started_at', 'status']&#10;assert None is not None">api = &lt;starlette.testclient.TestClient object at 0x7f26fd90f740&gt;
+tests/integration/extraction_support.py:184: AssertionError</failure></testcase><testcase classname="tests.integration.test_clue_extraction" name="test_ac050_a_clue_free_note_yields_no_finding_yet_is_recorded_as_processed" time="0.129"><failure message="AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {&quot;detail&quot;:&quot;'extraction' is not a job kind; expected one of dedup_check&quot;}">api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
 
-    def test_ac007_rows_missing_source_ref_or_source_type_fail_provenance_and_are_not_retrievable(
+    def test_ac050_a_clue_free_note_yields_no_finding_yet_is_recorded_as_processed(
         api: TestClient,
     ) -&gt; None:
-        """AC-007: an events.csv with one row missing source_ref and one missing
-        source_type reports both as provenance failures in the ingest report, and
-        neither row is retrievable from any read route."""
-        headers = admin_headers(api)
-        drop = ProvenanceDrop(uuid.uuid4().hex[:8], with_bad_rows=True)
-        report, _version = _ingest(api, headers, drop)
-    
-        # The report names the provenance failures, per the ingest-report contract.
-        failures = report.get("provenance_failures")
-&gt;       assert failures is not None, (
-            f"the ingest report carries no provenance_failures section: {sorted(report)}"
-        )
-E       AssertionError: the ingest report carries no provenance_failures section: ['dataset_version', 'files', 'finished_at', 'patient_count', 'run', 'run_id', 'seed', 'started_at', 'status']
-E       assert None is not None
+        """AC-050: a note containing none of the pack's target clues returns no finding
+        rather than an invented one, and is still counted as processed."""
+        admin = admin_headers(api)
+        drop = extraction_cohort(api, admin)
+        uuids = patient_uuids(api, admin, drop)
+&gt;       job = extraction_run(api, admin)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/integration/test_provenance.py:286: AssertionError</failure></testcase></testsuite></testsuites>
+tests/integration/test_clue_extraction.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/integration/extraction_support.py:224: in extraction_run
+    queued = start_extraction(api, admin)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+admin = {'Authorization': 'Bearer qX03MHQ8ha7rZ9XwH34XTT6JXUEe_YYKX8VX0aVZ_nw'}
+
+    def start_extraction(api: TestClient, admin: dict[str, str]) -&gt; dict:
+        """POST /api/admin/jobs {"kind": "extraction"} -&gt; 202 {job_id, kind, status}."""
+        response = api.post(JOBS, headers=admin, json={"kind": "extraction"})
+&gt;       assert response.status_code == 202, (
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            f"POST {JOBS} {{'kind': 'extraction'}} returned {response.status_code}, not 202: "
+            f"{response.text[:300]}"
+        )
+E       AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {"detail":"'extraction' is not a job kind; expected one of dedup_check"}
+
+tests/integration/extraction_support.py:184: AssertionError</failure></testcase><testcase classname="tests.integration.test_clue_extraction" name="test_ac051_an_extracted_finding_used_as_evidence_exposes_its_quote_and_note_link" time="0.129"><failure message="AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {&quot;detail&quot;:&quot;'extraction' is not a job kind; expected one of dedup_check&quot;}">api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+
+    def test_ac051_an_extracted_finding_used_as_evidence_exposes_its_quote_and_note_link(
+        api: TestClient,
+    ) -&gt; None:
+        """AC-051: where an extracted finding is used as evidence in a case, the
+        evidence item exposes the quoted sentence and a link back to the full note."""
+        admin = admin_headers(api)
+        drop = extraction_cohort(api, admin)
+        uuids = patient_uuids(api, admin, drop)
+&gt;       extraction_run(api, admin)
+
+tests/integration/test_clue_extraction.py:206: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/integration/extraction_support.py:224: in extraction_run
+    queued = start_extraction(api, admin)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+admin = {'Authorization': 'Bearer A3dip9NUzreRbRcg41CqPF1_RAGb47Nhs5c1Zww2jJc'}
+
+    def start_extraction(api: TestClient, admin: dict[str, str]) -&gt; dict:
+        """POST /api/admin/jobs {"kind": "extraction"} -&gt; 202 {job_id, kind, status}."""
+        response = api.post(JOBS, headers=admin, json={"kind": "extraction"})
+&gt;       assert response.status_code == 202, (
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            f"POST {JOBS} {{'kind': 'extraction'}} returned {response.status_code}, not 202: "
+            f"{response.text[:300]}"
+        )
+E       AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {"detail":"'extraction' is not a job kind; expected one of dedup_check"}
+
+tests/integration/extraction_support.py:184: AssertionError</failure></testcase><testcase classname="tests.integration.test_clue_extraction" name="test_ac052_the_extraction_report_shows_notes_processed_findings_per_clue_and_the_caveat" time="0.020"><failure message="AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {&quot;detail&quot;:&quot;'extraction' is not a job kind; expected one of dedup_check&quot;}">api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+
+    def test_ac052_the_extraction_report_shows_notes_processed_findings_per_clue_and_the_caveat(
+        api: TestClient,
+    ) -&gt; None:
+        """AC-052: GET /api/admin/extraction-report states the notes processed, the
+        findings per clue type and the caveat that templated note text makes extraction
+        easier here than on real clinical text."""
+        admin = admin_headers(api)
+        extraction_cohort(api, admin)
+&gt;       report = extraction_report(api, admin)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_clue_extraction.py:257: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/integration/extraction_support.py:235: in extraction_report
+    extraction_run(api, admin)
+tests/integration/extraction_support.py:224: in extraction_run
+    queued = start_extraction(api, admin)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+admin = {'Authorization': 'Bearer PSsgH6UVF7bTV9MR3yexsvF8lIpm2Bqvt9gC8PImdys'}
+
+    def start_extraction(api: TestClient, admin: dict[str, str]) -&gt; dict:
+        """POST /api/admin/jobs {"kind": "extraction"} -&gt; 202 {job_id, kind, status}."""
+        response = api.post(JOBS, headers=admin, json={"kind": "extraction"})
+&gt;       assert response.status_code == 202, (
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            f"POST {JOBS} {{'kind': 'extraction'}} returned {response.status_code}, not 202: "
+            f"{response.text[:300]}"
+        )
+E       AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {"detail":"'extraction' is not a job kind; expected one of dedup_check"}
+
+tests/integration/extraction_support.py:184: AssertionError</failure></testcase><testcase classname="tests.integration.test_clue_extraction" name="test_ac052_nfr006_the_extractor_runs_as_a_background_job_with_progress" time="0.021"><failure message="AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {&quot;detail&quot;:&quot;'extraction' is not a job kind; expected one of dedup_check&quot;}">api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+
+    def test_ac052_nfr006_the_extractor_runs_as_a_background_job_with_progress(
+        api: TestClient,
+    ) -&gt; None:
+        """AC-052 / NFR-006: the extraction run is queued as a background job that
+        answers immediately, and GET /api/admin/jobs/{job_id} reports its kind,
+        status and progress so no screen blocks while it runs."""
+        admin = admin_headers(api)
+        extraction_cohort(api, admin)
+    
+&gt;       queued = start_extraction(api, admin)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_clue_extraction.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+admin = {'Authorization': 'Bearer lQphP8A-9gjf8yL_TnaQx6QabjY3L62aWFvIGG7bXYc'}
+
+    def start_extraction(api: TestClient, admin: dict[str, str]) -&gt; dict:
+        """POST /api/admin/jobs {"kind": "extraction"} -&gt; 202 {job_id, kind, status}."""
+        response = api.post(JOBS, headers=admin, json={"kind": "extraction"})
+&gt;       assert response.status_code == 202, (
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            f"POST {JOBS} {{'kind': 'extraction'}} returned {response.status_code}, not 202: "
+            f"{response.text[:300]}"
+        )
+E       AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {"detail":"'extraction' is not a job kind; expected one of dedup_check"}
+
+tests/integration/extraction_support.py:184: AssertionError</failure></testcase><testcase classname="tests.integration.test_clue_extraction" name="test_ac052_the_extraction_report_is_401_unauthenticated" time="0.004"><failure message="AssertionError: GET /api/admin/extraction-report with a token belonging to no session returned 404: {&quot;detail&quot;:&quot;Not Found&quot;}&#10;assert 404 == 401&#10; +  where 404 = &lt;Response [404 Not Found]&gt;.status_code">api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+
+    def test_ac052_the_extraction_report_is_401_unauthenticated(api: TestClient) -&gt; None:
+        """Behaviour rules: no bearer token means 401 with the project's error shape."""
+        response = api.get(EXTRACTION_REPORT)
+        assert response.status_code == 401, (
+            f"GET {EXTRACTION_REPORT} unauthenticated returned {response.status_code}: "
+            f"{response.text[:200]}"
+        )
+        assert set(response.json()) == {"detail"}
+    
+        wrong = {"Authorization": f"Bearer {secrets.token_urlsafe(32)}"}
+        revoked = api.get(EXTRACTION_REPORT, headers=wrong)
+&gt;       assert revoked.status_code == 401, (
+            f"GET {EXTRACTION_REPORT} with a token belonging to no session returned "
+            f"{revoked.status_code}: {revoked.text[:200]}"
+        )
+E       AssertionError: GET /api/admin/extraction-report with a token belonging to no session returned 404: {"detail":"Not Found"}
+E       assert 404 == 401
+E        +  where 404 = &lt;Response [404 Not Found]&gt;.status_code
+
+tests/integration/test_clue_extraction.py:340: AssertionError</failure></testcase><testcase classname="tests.integration.test_clue_extraction" name="test_ac052_the_extraction_routes_are_403_for_a_patient_token" time="0.010"><failure message="AssertionError: GET /api/admin/extraction-report with a patient-role token returned 404: {&quot;detail&quot;:&quot;Not Found&quot;}&#10;assert 404 == 403&#10; +  where 404 = &lt;Response [404 Not Found]&gt;.status_code">api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+
+    def test_ac052_the_extraction_routes_are_403_for_a_patient_token(api: TestClient) -&gt; None:
+        """Behaviour rules: an authenticated token of the wrong role is 403."""
+        headers = _bearer(_patient_token(api))
+    
+        report = api.get(EXTRACTION_REPORT, headers=headers)
+&gt;       assert report.status_code == 403, (
+            f"GET {EXTRACTION_REPORT} with a patient-role token returned "
+            f"{report.status_code}: {report.text[:200]}"
+        )
+E       AssertionError: GET /api/admin/extraction-report with a patient-role token returned 404: {"detail":"Not Found"}
+E       assert 404 == 403
+E        +  where 404 = &lt;Response [404 Not Found]&gt;.status_code
+
+tests/integration/test_clue_extraction.py:351: AssertionError</failure></testcase><testcase classname="tests.integration.test_clue_extraction" name="test_ac052_no_payload_of_the_extraction_report_carries_a_credential" time="0.022"><failure message="AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {&quot;detail&quot;:&quot;'extraction' is not a job kind; expected one of dedup_check&quot;}">api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+
+    def test_ac052_no_payload_of_the_extraction_report_carries_a_credential(
+        api: TestClient,
+    ) -&gt; None:
+        """NFR-011 alongside AC-052: the report names no LLM credential value."""
+        admin = admin_headers(api)
+        extraction_cohort(api, admin)
+&gt;       report: Any = extraction_report(api, admin)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_clue_extraction.py:370: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/integration/extraction_support.py:235: in extraction_report
+    extraction_run(api, admin)
+tests/integration/extraction_support.py:224: in extraction_run
+    queued = start_extraction(api, admin)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+api = &lt;starlette.testclient.TestClient object at 0x7f6808f0ec30&gt;
+admin = {'Authorization': 'Bearer vNgRXCiZr1hAVkwmdpM9yg1XpjL4d5-tkQ2_F_CAKYg'}
+
+    def start_extraction(api: TestClient, admin: dict[str, str]) -&gt; dict:
+        """POST /api/admin/jobs {"kind": "extraction"} -&gt; 202 {job_id, kind, status}."""
+        response = api.post(JOBS, headers=admin, json={"kind": "extraction"})
+&gt;       assert response.status_code == 202, (
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            f"POST {JOBS} {{'kind': 'extraction'}} returned {response.status_code}, not 202: "
+            f"{response.text[:300]}"
+        )
+E       AssertionError: POST /api/admin/jobs {'kind': 'extraction'} returned 422, not 202: {"detail":"'extraction' is not a job kind; expected one of dedup_check"}
+
+tests/integration/extraction_support.py:184: AssertionError</failure></testcase></testsuite></testsuites>

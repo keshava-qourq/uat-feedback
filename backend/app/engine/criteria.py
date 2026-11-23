@@ -54,18 +54,25 @@ def pack_config(db: Session) -> dict[str, Any] | None:
     if not pack_registry.pack_enabled():
         return None
     stored = active_pack(db)
-    if stored is not None:
-        return stored.config
     key = pack_registry.active_pack_key()
     if key is None:
         keys = pack_registry.list_packs()
-        if len(keys) != 1:
-            return None
-        key = keys[0]
-    try:
-        return pack_registry.load_pack(key).data
-    except pack_registry.PackValidationError:
-        return None
+        key = keys[0] if len(keys) == 1 else None
+    shipped: dict[str, Any] | None = None
+    if key is not None:
+        try:
+            shipped = pack_registry.load_pack(key).data
+        except pack_registry.PackValidationError:
+            shipped = None
+    if stored is None:
+        return shipped
+    config = dict(stored.config)
+    # A stored row written before a section shipped must not hide that section:
+    # the shipped file supplies whatever the stored version does not declare.
+    for name, value in (shipped or {}).items():
+        if config.get(name) is None:
+            config[name] = value
+    return config
 
 
 def _mapping(config: dict[str, Any], name: str) -> dict[str, Any]:

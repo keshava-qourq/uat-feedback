@@ -387,6 +387,64 @@ function AdminScreen() {
       ? dedupData.progress_pct
       : null;
 
+  // US-015: clue extraction over the notes — a background job, polled, plus its report.
+  const [extractJobId, setExtractJobId] = React.useState(null);
+  const [extractError, setExtractError] = React.useState("");
+
+  const extraction = useQuery({
+    queryKey: ["extraction-report"],
+    queryFn: () => apiFetch("/api/admin/extraction-report"),
+    retry: false,
+  });
+
+  const startExtraction = useMutation({
+    mutationFn: () =>
+      apiFetch("/api/admin/jobs", {
+        method: "POST",
+        body: JSON.stringify({ kind: "clue_extraction" }),
+      }),
+    onSuccess: (data) => {
+      setExtractError("");
+      setExtractJobId(data.job_id);
+    },
+    onError: (err) => setExtractError(err.message || "Could not start the clue extraction."),
+  });
+
+  const extractJob = useQuery({
+    queryKey: ["admin-job", extractJobId],
+    queryFn: () => apiFetch("/api/admin/jobs/" + extractJobId),
+    enabled: extractJobId !== null,
+    retry: false,
+    refetchInterval: (query) => (JOB_ACTIVE.includes(query.state.data?.status) ? 1000 : false),
+  });
+
+  const extractData = extractJob.data ?? null;
+  const extractRunning =
+    startExtraction.isPending ||
+    (extractData ? JOB_ACTIVE.includes(extractData.status) : extractJob.isFetching);
+  const extractProgress =
+    extractData && typeof extractData.progress === "number" ? extractData.progress : null;
+  const extractMessage = extractJob.error
+    ? extractJob.error.message || "Could not read the clue-extraction job."
+    : extractData && extractData.status === "failed"
+      ? "The clue extraction failed. Start it again to retry."
+      : extractError;
+  const extractFinished = extractData && extractData.status === "finished";
+
+  // The report is re-read once the job finishes, so the counts reflect the new run.
+  React.useEffect(() => {
+    if (extractFinished) extraction.refetch();
+  }, [extractFinished]);
+
+  const report52 = extraction.data ?? null;
+  const findings = Array.isArray(report52?.findings_by_clue_type)
+    ? report52.findings_by_clue_type
+    : [];
+  const maxFinding = findings.reduce((m, f) => Math.max(m, f.count || 0), 0);
+  const extractionReadError = extraction.error
+    ? extraction.error.message || "Could not read the extraction report."
+    : "";
+
   const settings = useQuery({
     queryKey: ["admin-settings"],
     queryFn: () => apiFetch("/api/admin/settings"),
@@ -847,6 +905,113 @@ function AdminScreen() {
               </TBody>
             </Table>
           </div>
+        </section>
+
+        {/* US-015 — clue extraction over the notes */}
+        <section data-wf="b-ext-0" className="frame" aria-labelledby="extract-h">
+          <h2 id="extract-h" className="hd" style={{ fontSize: 18, textAlign: "center" }}>
+            Clue extraction report
+          </h2>
+          <Ornament />
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <Button
+              type="button"
+              className="btn btn-s"
+              onClick={() => startExtraction.mutate()}
+              disabled={extractRunning}
+            >
+              {extractRunning ? "Extracting…" : "Run clue extraction"}
+            </Button>
+          </div>
+          <p
+            className="small muted num"
+            style={{ margin: "0 0 16px", textAlign: "center" }}
+            role="status"
+            aria-live="polite"
+          >
+            {extractRunning
+              ? "Clue extraction running" +
+                (extractProgress === null
+                  ? "…"
+                  : " · " +
+                    Math.round(extractProgress <= 1 ? extractProgress * 100 : extractProgress) +
+                    "%")
+              : extractFinished
+                ? "Clue extraction finished."
+                : "Not run yet. Start the extraction to read the notes for clues."}
+          </p>
+          {extractMessage ? (
+            <p className="small" role="alert" style={{ margin: "0 0 16px", textAlign: "center" }}>
+              {extractMessage}
+            </p>
+          ) : null}
+          {extractionReadError ? (
+            <p className="small" style={{ margin: "0 0 16px", textAlign: "center" }}>
+              Could not read the extraction report. {extractionReadError}
+            </p>
+          ) : (
+            <>
+              <div style={{ textAlign: "center", marginBottom: 16 }}>
+                <span className="eyebrow">Notes processed</span>
+                <span className="figure" style={{ display: "block" }}>
+                  {report52 ? n0(report52.notes_processed) : "—"}
+                </span>
+                <span className="small muted" style={{ display: "block", marginTop: 4 }}>
+                  {report52 && report52.dataset_version
+                    ? "Dataset " + report52.dataset_version
+                    : "No dataset version recorded"}
+                </span>
+              </div>
+              <div className="scroll">
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Clue type</TH>
+                      <TH className="num-col">Findings</TH>
+                      <TH>Share</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {findings.length ? (
+                      findings.map((f) => (
+                        <TR key={f.clue_type}>
+                          <TD>{f.clue_type}</TD>
+                          <TD className="num-col num">{n0(f.count)}</TD>
+                          <TD>
+                            <span className="bar" style={{ display: "block", minWidth: 80 }}>
+                              <span
+                                style={{
+                                  width: maxFinding
+                                    ? Math.round((f.count / maxFinding) * 100) + "%"
+                                    : "0%",
+                                }}
+                              />
+                            </span>
+                          </TD>
+                        </TR>
+                      ))
+                    ) : (
+                      <TR>
+                        <TD colSpan={3} className="muted">
+                          No findings recorded yet.
+                        </TD>
+                      </TR>
+                    )}
+                  </TBody>
+                </Table>
+              </div>
+              {report52 && report52.caveat ? (
+                <p className="small" style={{ margin: "16px 0 0" }}>
+                  {report52.caveat}
+                </p>
+              ) : null}
+              {report52 && report52.notice ? (
+                <p className="small muted" style={{ margin: "8px 0 0" }}>
+                  {report52.notice}
+                </p>
+              ) : null}
+            </>
+          )}
         </section>
 
         {/* Row 4 */}

@@ -43,6 +43,7 @@ __all__ = [
     "Patient",
     "Event",
     "Note",
+    "NoteFinding",
     "IntakeAnswer",
     "CoveragePeriod",
     "EncounterTruth",
@@ -253,6 +254,34 @@ class Note(Base):
     note_type: Mapped[str] = mapped_column(String)  # "clinic_note" | "imaging_report"
     text: Mapped[str] = mapped_column(Text)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class NoteFinding(Base):
+    """One structured clue the extractor found in one note (US-015-1).
+
+    `quoted_sentence` is the sentence exactly as it stands in the note, and
+    `source_ref` is the note's own reference, so every finding can be traced
+    back to the text it came from. A note that yields nothing writes no row
+    here and is marked processed on `notes.processed_at` instead.
+    """
+
+    __tablename__ = "note_findings"
+    __table_args__ = (
+        Index("ix_note_findings_patient_id_clue_type", "patient_id", "clue_type"),
+        Index("ix_note_findings_note_id", "note_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    note_id: Mapped[str] = mapped_column(String, ForeignKey("notes.id"), nullable=False)
+    patient_id: Mapped[str] = mapped_column(String, ForeignKey("patients.id"), nullable=False)
+    clue_type: Mapped[str] = mapped_column(String)
+    finding_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quoted_sentence: Mapped[str] = mapped_column(Text)
+    source_ref: Mapped[str] = mapped_column(String)
+    extractor_model: Mapped[str] = mapped_column(String)
+    extracted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
 
 
 class IntakeAnswer(Base):
