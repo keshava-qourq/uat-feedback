@@ -383,6 +383,24 @@ def persona_replay(persona_key: str, user: CurrentUser, db: Db) -> dict[str, Any
     )
 
 
+@router.get("/api/cases/{patient_id}")
+def case_read(patient_id: str, user: Staff, db: Db) -> dict[str, Any]:
+    """The criteria evaluation for one patient, as of their cutoff (US-010-1).
+
+    Every criterion name, point item, points value and the referral threshold
+    comes from the active condition pack; the evidence behind a met item is
+    pre-cutoff only, and an unknown item is never counted into the total.
+    """
+    from app.engine.criteria import evaluate_case
+
+    patient = db.get(Patient, patient_id)
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"no patient {patient_id}"
+        )
+    return with_notice(evaluate_case(db, patient.id))
+
+
 @router.get("/api/cases/{patient_id}/timeline")
 def case_timeline(patient_id: str, user: Staff, db: Db) -> dict[str, Any]:
     """One patient's stored events, each with its provenance and note text."""

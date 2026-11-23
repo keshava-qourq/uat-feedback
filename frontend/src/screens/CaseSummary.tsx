@@ -1,7 +1,9 @@
 // @ts-nocheck -- generated from the approved design under its JS runtime contract; not hand-written TypeScript.
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React from "react";
+import { useSearchParams } from "react-router-dom";
 
+import { ApiError, apiFetch } from "@/lib/api";
 import * as UI from "@/lib/ui";
 import { Icons } from "@/lib/icons";
 import { brand } from "@/lib/brand";
@@ -73,27 +75,6 @@ const CONFLICTING = [
     date: "2021",
     tag: "Record",
     note: "May not explain inflammatory features",
-  },
-];
-
-const CRITERIA_MET = [
-  {
-    id: "i-4-0-0",
-    label: "Inflammatory back pain",
-    status: "met",
-    detail: "Night pain, 2024-02-10 · You told us",
-  },
-  { id: "i-4-0-1", label: "Uveitis", status: "met", detail: "Uveitis visit, 2022-05-12 · Record" },
-  { id: "i-4-0-2", label: "SPARTAN points", status: "points", points: 4, threshold: 6 },
-];
-
-const CRITERIA_MISSING = [
-  { id: "i-4-1-0", label: "Sacroiliac imaging", status: "unknown", detail: "Needs MRI or X-ray" },
-  {
-    id: "i-4-1-1",
-    label: "HLA-B27",
-    status: "not met",
-    detail: "Negative result on record; this does not rule the condition out",
   },
 ];
 
@@ -317,7 +298,7 @@ const StatusMark = ({ status }) => {
   const map = {
     met: ["CheckCircle", "Met"],
     unknown: ["AlertCircle", "Unknown"],
-    "not met": ["X", "Not met"],
+    not_met: ["X", "Not met"],
   };
   const [icon, word] = map[status] || map.unknown;
   return (
@@ -337,53 +318,97 @@ const StatusMark = ({ status }) => {
   );
 };
 
-const CriterionRow = ({ item }) => (
-  <li
-    data-wf={item.id}
-    style={{ borderTop: `1px solid ${hair()}`, padding: "12px 8px", fontSize: 14 }}
-  >
-    <div className="flex items-start justify-between gap-3">
-      <span style={{ fontWeight: 600, color: brand.primaryColor }}>
-        {item.label}
-        {item.status === "points" ? (
-          <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 400 }}>
-            : {item.points} of threshold {item.threshold}
-          </span>
-        ) : null}
-      </span>
-      {item.status !== "points" ? <StatusMark status={item.status} /> : null}
-    </div>
-    {item.status === "points" ? (
-      <div style={{ marginTop: 8 }}>
-        <div
-          role="img"
-          aria-label={`${item.points} of ${item.threshold} points toward the referral threshold`}
-          className="flex gap-1"
-        >
-          {Array.from({ length: item.threshold }).map((_, i) => (
-            <span
-              key={i}
-              style={{
-                width: 24,
-                height: 8,
-                background: i < item.points ? brand.primaryColor : "transparent",
-                border: `1px solid ${brand.primaryColor}`,
-              }}
-            />
-          ))}
+// US-010: one criterion or SPARTAN point item, straight from
+// GET /api/cases/{patient_id}. Its detail opens on demand and shows the named
+// evidence (met) or the 'needed' text (unknown / not met).
+const CriterionRow = ({ item, group }) => {
+  const [open, setOpen] = React.useState(false);
+  const panelId = `criterion-${group}-${item.key}`;
+  const evidence = item.evidence ?? null;
+  return (
+    <li
+      data-testid={`criterion-${item.key}`}
+      style={{ borderTop: `1px solid ${hair()}`, fontSize: 14 }}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((o) => !o)}
+        className="cs-row flex w-full items-start justify-between gap-3 text-left"
+        style={{
+          padding: "12px 8px",
+          minHeight: 44,
+          background: "transparent",
+          border: 0,
+          cursor: "pointer",
+          fontSize: 14,
+          borderRadius: 0,
+        }}
+      >
+        <span style={{ fontWeight: 600, color: brand.primaryColor }}>
+          {item.label}
+          {typeof item.points === "number" ? (
+            <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 400 }}>
+              {" "}
+              · {item.points} {item.points === 1 ? "point" : "points"}
+            </span>
+          ) : null}
+        </span>
+        <StatusMark status={item.status} />
+      </button>
+      {open ? (
+        <div id={panelId} style={{ padding: "0 8px 12px", fontSize: 13, color: soft() }}>
+          {evidence ? (
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <span style={{ fontWeight: 600, color: brand.primaryColor }}>{evidence.display}</span>
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>{evidence.date}</span>
+              <SourceTag tag={evidence.source_tag} />
+            </span>
+          ) : (
+            <span>{item.needed || "No detail recorded for this item."}</span>
+          )}
         </div>
-        <div style={{ fontSize: 13, color: soft(), marginTop: 4 }}>
-          {item.threshold - item.points} more points reach the referral threshold in the pack.
-        </div>
-      </div>
-    ) : (
-      <div style={{ fontSize: 13, color: soft(), marginTop: 4 }}>{item.detail}</div>
-    )}
-  </li>
-);
+      ) : null}
+    </li>
+  );
+};
 
 export default function Screen() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const patientId = params.get("patient_id") ?? "";
+  // US-010: the criteria panel is the only part of this screen served by the API.
+  const [caseData, setCaseData] = React.useState(null);
+  const [caseLoading, setCaseLoading] = React.useState(true);
+  const [caseError, setCaseError] = React.useState("");
+
+  React.useEffect(() => {
+    let live = true;
+    setCaseLoading(true);
+    apiFetch(`/api/cases/${patientId}`)
+      .then((data) => {
+        if (!live) return;
+        setCaseData(data);
+        setCaseError("");
+      })
+      .catch((err) => {
+        if (!live) return;
+        setCaseData(null);
+        setCaseError(err instanceof ApiError ? err.message : "Could not load this case.");
+      })
+      .finally(() => {
+        if (live) setCaseLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [patientId]);
+
+  const asas = caseData?.criteria?.asas_referral ?? [];
+  const spartan = caseData?.criteria?.spartan ?? null;
+  const spartanItems = spartan?.items ?? [];
+
   const [decision, setDecision] = React.useState("");
   const [reason, setReason] = React.useState("");
   const [results, setResults] = React.useState({ hla: false, crp: false, mri: false });
@@ -680,14 +705,29 @@ export default function Screen() {
           )}
         </ListBlock>
 
-        {/* Row 5 */}
-        <ListBlock wf="b-4-0" title="Criteria met" span="md:col-span-6">
-          {CRITERIA_MET.map((i) => (
-            <CriterionRow key={i.id} item={i} />
-          ))}
+        {/* Row 5 — referral criteria, from GET /api/cases/{patient_id} */}
+        <ListBlock wf="b-4-0" title="Referral criteria" span="md:col-span-6">
+          {caseLoading ? (
+            <EmptyNote>Loading the criteria…</EmptyNote>
+          ) : caseError ? (
+            <li
+              role="alert"
+              style={{
+                borderTop: `1px solid ${hair()}`,
+                padding: "16px 8px",
+                fontSize: 14,
+              }}
+            >
+              {caseError}
+            </li>
+          ) : asas.length ? (
+            asas.map((i) => <CriterionRow key={i.key} item={i} group="asas" />)
+          ) : (
+            <EmptyNote>No referral criteria for this patient.</EmptyNote>
+          )}
         </ListBlock>
         <Frame wf="b-4-1" className="md:col-span-6">
-          <H2>Criteria missing / unknown</H2>
+          <H2>Point items</H2>
           <Ornament />
           <ul
             style={{
@@ -697,12 +737,30 @@ export default function Screen() {
               borderBottom: `1px solid ${hair()}`,
             }}
           >
-            {CRITERIA_MISSING.map((i) => (
-              <CriterionRow key={i.id} item={i} />
-            ))}
+            {caseLoading ? (
+              <EmptyNote>Loading the point items…</EmptyNote>
+            ) : spartanItems.length ? (
+              spartanItems.map((i) => <CriterionRow key={i.key} item={i} group="spartan" />)
+            ) : (
+              <EmptyNote>No point items for this patient.</EmptyNote>
+            )}
           </ul>
+          {spartan ? (
+            <p
+              data-testid="spartan-total"
+              style={{
+                margin: "12px 0 0",
+                fontSize: 14,
+                fontWeight: 700,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              Total {spartan.total} of threshold {spartan.threshold}
+              {spartan.total >= spartan.threshold ? " — threshold reached" : " — below threshold"}
+            </p>
+          ) : null}
           <p style={{ margin: "12px 0 0", fontSize: 13, color: soft() }}>
-            Unknown is never counted as not met in the SPARTAN total.
+            Unknown is never counted as not met in the total.
           </p>
         </Frame>
 
