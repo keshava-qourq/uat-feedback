@@ -3,61 +3,39 @@
 > Maintained by QuorQ AI SDLC. Text between `sdlc:auto` markers is regenerated; anything outside them is yours and is kept.
 
 <!-- sdlc:auto:start narrative -->
-### DEV-US-003 · approved · source: dev:US-003
+### DEV-US-010 · approved · source: dev:US-010
 
-Ticket US-003, "Quarantine ground-truth labels away from the engine", was delivered during the development run. The work is attributed to commit 63bcdd7c77b4eda58477e702a743a91bc1eea514. No further implementation detail was provided in the input.
+Ticket US-010 implements evaluation of ASAS referral criteria and SPARTAN points. The work is reported as delivered in a completed development run. It landed in commit 5603fbea4c30db957867f9c02ecd74da05096fcd.
 
-- Ticket: US-003 — Quarantine ground-truth labels away from the engine
-- Status reported by the development run: delivered
-- Commit: 63bcdd7c77b4eda58477e702a743a91bc1eea514
-- The same commit hash is also recorded against ticket US-009; the input does not explain whether this is a shared commit or a recording discrepancy. Both attributions are retained as given.
-- Not stated in the input: date, author/reviewer, files or modules changed, tests run, acceptance evidence.
+- Scope: Evaluate ASAS referral criteria and SPARTAN points.
+- Status: delivered (development run status: completed).
+- Commit: 5603fbea4c30db957867f9c02ecd74da05096fcd (shared with US-015 and US-034).
+- Traces to requirement US-010.
+- Not stated in the input: implementation approach, author/reviewer, dates, test coverage, or verification results.
 
-**Related:** US-003
+**Related:** US-010
 
-### DEV-US-004 · approved · source: dev:US-004
+### DEV-US-015 · approved · source: dev:US-015
 
-Ticket US-004, "De-duplicate EHR and claim views of the same encounter", was delivered during the development run. The work is attributed to commit 0b7afaa3940760d9f6bfdaaea9be5523456ffe09. No further implementation detail was provided in the input.
+Ticket US-015 implements extraction of buried clues from clinical notes and imaging reports, each returned with a quoted source. The work is reported as delivered in a completed development run. It landed in commit 5603fbea4c30db957867f9c02ecd74da05096fcd.
 
-- Ticket: US-004 — De-duplicate EHR and claim views of the same encounter
-- Status reported by the development run: delivered
-- Commit: 0b7afaa3940760d9f6bfdaaea9be5523456ffe09
-- Not stated in the input: date, author/reviewer, de-duplication rule or matching keys used, data volumes affected, tests run, acceptance evidence.
+- Scope: Extract buried clues from notes and imaging reports, with a quoted source accompanying each extracted clue.
+- Status: delivered (development run status: completed).
+- Commit: 5603fbea4c30db957867f9c02ecd74da05096fcd (shared with US-010 and US-034).
+- Traces to requirement US-015.
+- Not stated in the input: extraction method, source documents covered, author/reviewer, dates, or verification results.
 
-**Related:** US-004
+**Related:** US-015
 
-### DEV-US-009 · approved · source: dev:US-009
+### DEV-US-034 · approved · source: dev:US-034
 
-Ticket US-009, "Score each patient only on data available before their cutoff", was delivered during the development run. The work is attributed to commit 63bcdd7c77b4eda58477e702a743a91bc1eea514. No further implementation detail was provided in the input.
+Ticket US-034 blocks post-cutoff data from both scoring and display. The work is reported as delivered in a completed development run. It landed in commit 5603fbea4c30db957867f9c02ecd74da05096fcd.
 
-- Ticket: US-009 — Score each patient only on data available before their cutoff
-- Status reported by the development run: delivered
-- Commit: 63bcdd7c77b4eda58477e702a743a91bc1eea514
-- The same commit hash is also recorded against ticket US-003; the input does not explain whether the two tickets were landed together in one commit or whether one attribution is in error. Both attributions are recorded as given.
-- Not stated in the input: date, author/reviewer, how the cutoff is defined or enforced, tests run, acceptance evidence.
+- Scope: Prevent data dated after the defined cutoff from being used in scoring and from being shown in the UI.
+- Status: delivered (development run status: completed).
+- Commit: 5603fbea4c30db957867f9c02ecd74da05096fcd (shared with US-010 and US-015).
+- Traces to requirement US-034.
+- Not stated in the input: how the cutoff is defined or configured, enforcement points, author/reviewer, dates, or verification results.
 
-**Related:** US-009
-
-### DEV-US-017 · approved · source: dev:US-017
-
-Ticket US-017, "Configure the LLM credential as deployment configuration", was delivered during the development run. The work is attributed to commit 2120acc390cc75268ca0a9206a10b835879d3465. No further implementation detail was provided in the input.
-
-- Ticket: US-017 — Configure the LLM credential as deployment configuration
-- Status reported by the development run: delivered
-- Commit: 2120acc390cc75268ca0a9206a10b835879d3465
-- The credential itself is supplied at deploy time as configuration (e.g. <llm-api-key>) and is not recorded in this document or in source control.
-- Not stated in the input: date, author/reviewer, configuration mechanism (environment variable, secret store, config file), rotation handling, tests run, acceptance evidence.
-
-**Related:** US-017
-
-### DEV-US-FIX-1 · draft · source: dev:US-FIX-1
-
-Ticket US-FIX-1, "Fix the scaffold's failing checks", is reported as failed. No commit was produced. The input gives no diagnosis, error output, or remediation plan, so the cause and current state of the scaffold's checks remain undocumented.
-
-- Ticket: US-FIX-1 — Fix the scaffold's failing checks
-- Status reported by the development run: failed
-- Commit: none
-- Open point for follow-up: the scaffold's checks were not reported as fixed; the input does not say which checks fail, why the attempt failed, or whether it blocks the delivered tickets.
-- Not stated in the input: date, author, error logs, retry attempts, owner for remediation.
-- No requirement key was given for this ticket in the input, so related_ids is left empty rather than guessed.
+**Related:** US-034
 <!-- sdlc:auto:end narrative -->
