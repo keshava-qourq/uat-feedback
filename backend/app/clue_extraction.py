@@ -33,7 +33,6 @@ from app import llm
 from app.database import SessionLocal
 from app.engine.criteria import pack_config
 from app.models import Note, NoteFinding
-from app.pack import registry as pack_registry
 
 __all__ = [
     "CLUE_SECTION",
@@ -47,40 +46,20 @@ __all__ = [
 #: The pack section declaring what the extractor looks for.
 CLUE_SECTION = "free_text_clues"
 
-#: How many notes one Anthropic answer may describe: one, always.
+#: The answer budget for one note's extraction call.
 MAX_TOKENS = 1024
 
 
 def target_clues(db: Session) -> dict[str, dict[str, Any]]:
-    """The clue definitions the active pack declares, keyed by clue type."""
-    config = pack_config(db) or {}
-    section = config.get(CLUE_SECTION)
-    if not isinstance(section, dict) or not section:
-        # The stored pack row predates this section; the shipped pack file is
-        # the same pack's newer version, so read the section from it (NFR-019
-        # keeps the pack data, but a section the code depends on must resolve).
-        section = _section_from_pack_file()
+    """The clue definitions the active pack declares, keyed by clue type.
+
+    `pack_config` already supplies any section a stored pack row predates
+    from the shipped pack file, so this reads one place only.
+    """
+    section = (pack_config(db) or {}).get(CLUE_SECTION)
     if not isinstance(section, dict):
         return {}
     return {str(key): dict(value or {}) for key, value in section.items()}
-
-
-def _section_from_pack_file() -> dict[str, Any] | None:
-    """The clue section of the shipped pack file, when one is active."""
-    if not pack_registry.pack_enabled():
-        return None
-    key = pack_registry.active_pack_key()
-    if key is None:
-        keys = pack_registry.list_packs()
-        if len(keys) != 1:
-            return None
-        key = keys[0]
-    try:
-        data = pack_registry.load_pack(key).data
-    except pack_registry.PackValidationError:
-        return None
-    section = data.get(CLUE_SECTION)
-    return section if isinstance(section, dict) else None
 
 
 def _prompt(text: str, clues: dict[str, dict[str, Any]]) -> str:

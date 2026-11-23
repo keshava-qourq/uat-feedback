@@ -332,6 +332,42 @@ function diffPack(saved, draft) {
 
 const ACTIVE = ["queued", "running"];
 
+// One background job on /api/admin/jobs: started on demand, then polled while it runs.
+function useAdminJob(kind, label) {
+  const [jobId, setJobId] = React.useState(null);
+  const [startError, setStartError] = React.useState("");
+
+  const start = useMutation({
+    mutationFn: () =>
+      apiFetch("/api/admin/jobs", { method: "POST", body: JSON.stringify({ kind }) }),
+    onSuccess: (data) => {
+      setStartError("");
+      setJobId(data.job_id);
+    },
+    onError: (err) => setStartError(err.message || "Could not start the " + label + "."),
+  });
+
+  const job = useQuery({
+    queryKey: ["admin-job", jobId],
+    queryFn: () => apiFetch("/api/admin/jobs/" + jobId),
+    enabled: jobId !== null,
+    retry: false,
+    refetchInterval: (query) => (JOB_ACTIVE.includes(query.state.data?.status) ? 1000 : false),
+  });
+
+  const data = job.data ?? null;
+  return {
+    start,
+    data,
+    running: start.isPending || (data ? JOB_ACTIVE.includes(data.status) : job.isFetching),
+    message: job.error
+      ? job.error.message || "Could not read the " + label + "."
+      : data && data.status === "failed"
+        ? "The " + label + " failed. Start it again to retry."
+        : startError,
+  };
+}
+
 function AdminScreen() {
   const { Button, Input, Label, Select, Table, THead, TBody, TR, TH, TD, Empty } = UI;
 
@@ -348,48 +384,21 @@ function AdminScreen() {
   });
 
   // De-duplication check: a real background job, started on demand and polled.
-  const [dedupJobId, setDedupJobId] = React.useState(null);
-  const [dedupError, setDedupError] = React.useState("");
-
-  const startDedup = useMutation({
-    mutationFn: () =>
-      apiFetch("/api/admin/jobs", {
-        method: "POST",
-        body: JSON.stringify({ kind: "dedup_check" }),
-      }),
-    onSuccess: (data) => {
-      setDedupError("");
-      setDedupJobId(data.job_id);
-    },
-    onError: (err) => setDedupError(err.message || "Could not start the de-duplication check."),
-  });
-
-  const dedupJob = useQuery({
-    queryKey: ["admin-job", dedupJobId],
-    queryFn: () => apiFetch("/api/admin/jobs/" + dedupJobId),
-    enabled: dedupJobId !== null,
-    retry: false,
-    refetchInterval: (query) => (JOB_ACTIVE.includes(query.state.data?.status) ? 1000 : false),
-  });
-
-  const dedupData = dedupJob.data ?? null;
-  const dedupRunning =
-    startDedup.isPending ||
-    (dedupData ? JOB_ACTIVE.includes(dedupData.status) : dedupJob.isFetching);
+  const dedup = useAdminJob("dedup_check", "de-duplication check");
+  const dedupData = dedup.data;
+  const dedupRunning = dedup.running;
   const dedupResult = dedupData && dedupData.status === "finished" ? dedupData.result : null;
-  const dedupMessage = dedupJob.error
-    ? dedupJob.error.message || "Could not read the de-duplication check."
-    : dedupData && dedupData.status === "failed"
-      ? "The de-duplication check failed. Start it again to retry."
-      : dedupError;
+  const dedupMessage = dedup.message;
   const dedupProgress =
     dedupRunning && dedupData && typeof dedupData.progress_pct === "number"
       ? dedupData.progress_pct
       : null;
 
   // US-015: clue extraction over the notes — a background job, polled, plus its report.
-  const [extractJobId, setExtractJobId] = React.useState(null);
-  const [extractError, setExtractError] = React.useState("");
+  const extract = useAdminJob("clue_extraction", "clue extraction");
+  const extractData = extract.data;
+  const extractRunning = extract.running;
+  const extractMessage = extract.message;
 
   const extraction = useQuery({
     queryKey: ["extraction-report"],
@@ -397,38 +406,8 @@ function AdminScreen() {
     retry: false,
   });
 
-  const startExtraction = useMutation({
-    mutationFn: () =>
-      apiFetch("/api/admin/jobs", {
-        method: "POST",
-        body: JSON.stringify({ kind: "clue_extraction" }),
-      }),
-    onSuccess: (data) => {
-      setExtractError("");
-      setExtractJobId(data.job_id);
-    },
-    onError: (err) => setExtractError(err.message || "Could not start the clue extraction."),
-  });
-
-  const extractJob = useQuery({
-    queryKey: ["admin-job", extractJobId],
-    queryFn: () => apiFetch("/api/admin/jobs/" + extractJobId),
-    enabled: extractJobId !== null,
-    retry: false,
-    refetchInterval: (query) => (JOB_ACTIVE.includes(query.state.data?.status) ? 1000 : false),
-  });
-
-  const extractData = extractJob.data ?? null;
-  const extractRunning =
-    startExtraction.isPending ||
-    (extractData ? JOB_ACTIVE.includes(extractData.status) : extractJob.isFetching);
   const extractProgress =
     extractData && typeof extractData.progress === "number" ? extractData.progress : null;
-  const extractMessage = extractJob.error
-    ? extractJob.error.message || "Could not read the clue-extraction job."
-    : extractData && extractData.status === "failed"
-      ? "The clue extraction failed. Start it again to retry."
-      : extractError;
   const extractFinished = extractData && extractData.status === "finished";
 
   // The report is re-read once the job finishes, so the counts reflect the new run.
@@ -917,7 +896,7 @@ function AdminScreen() {
             <Button
               type="button"
               className="btn btn-s"
-              onClick={() => startExtraction.mutate()}
+              onClick={() => extract.start.mutate()}
               disabled={extractRunning}
             >
               {extractRunning ? "Extracting…" : "Run clue extraction"}
@@ -1029,7 +1008,7 @@ function AdminScreen() {
               <Button
                 type="button"
                 className="btn btn-s"
-                onClick={() => startDedup.mutate()}
+                onClick={() => dedup.start.mutate()}
                 disabled={dedupRunning}
               >
                 {dedupRunning ? "Checking…" : "Run de-duplication check"}

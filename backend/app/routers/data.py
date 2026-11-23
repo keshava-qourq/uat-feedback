@@ -443,11 +443,7 @@ def case_note(patient_id: str, source_ref: str, user: Staff, db: Db) -> dict[str
 @router.get("/api/cases/{patient_id}/timeline")
 def case_timeline(patient_id: str, user: Staff, db: Db) -> dict[str, Any]:
     """One patient's stored events, each with its provenance and note text."""
-    patient = db.get(Patient, patient_id)
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"no patient {patient_id}"
-        )
+    patient = _patient_or_404(db, patient_id)
     # The cutoff itself is an operational field (AC-010) and a plain date
     # (behaviour rules): stating it lets the leakage check prove the read holds
     # nothing dated on or after it (NFR-013, AC-029).
@@ -473,11 +469,7 @@ def latest_evaluation(user: Staff, db: Db) -> dict[str, Any]:
 
 @router.get("/api/cases/{patient_id}/referral-packet.pdf")
 def referral_packet_pdf(patient_id: str, user: Staff, db: Db) -> Response:
-    patient = db.get(Patient, patient_id)
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"no patient {patient_id}"
-        )
+    patient = _patient_or_404(db, patient_id)
     pages = [
         [
             "Referral packet",

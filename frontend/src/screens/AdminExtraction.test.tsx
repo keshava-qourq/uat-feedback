@@ -114,6 +114,18 @@ describe("Admin clue-extraction report", () => {
     expect(calls.some((c) => String(c[0]).endsWith(`/api/admin/jobs/${JOB_ID}`))).toBe(true);
   });
 
+  it("[NFR-006] a failed extraction job says so and offers the retry", async () => {
+    vi.stubGlobal("fetch", mockApi({ jobState: job("failed") }));
+    render(<Admin />);
+
+    await userEvent.click(screen.getByRole("button", { name: /run clue extraction/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/The clue extraction failed\. Start it again to retry\./)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: /run clue extraction/i })).toBeEnabled();
+  });
+
   it("[AC-052] a 403 on the report shows the API's detail, not a blank panel", async () => {
     vi.stubGlobal(
       "fetch",
