@@ -121,7 +121,9 @@ describe("Admin clue-extraction report", () => {
     await userEvent.click(screen.getByRole("button", { name: /run clue extraction/i }));
 
     await waitFor(() =>
-      expect(screen.getByText(/The clue extraction failed\. Start it again to retry\./)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/The clue extraction failed\. Start it again to retry\./),
+      ).toBeInTheDocument(),
     );
     expect(screen.getByRole("button", { name: /run clue extraction/i })).toBeEnabled();
   });

@@ -110,9 +110,7 @@ def test_ac049_an_imaging_report_yields_a_finding_per_target_clue(api: TestClien
     mine = [f for f in found if note_ref_of(f) == drop.imaging_source_ref] or found
     blob = " ".join(f"{clue_of(f)} {quote_of(f)}" for f in mine).lower()
     missing = [
-        name
-        for name, words in TARGET_CLUES.items()
-        if not all(word in blob for word in words)
+        name for name, words in TARGET_CLUES.items() if not all(word in blob for word in words)
     ]
     assert not missing, (
         f"the extractor returned no finding for these target clues of the imaging "
@@ -233,8 +231,7 @@ def test_ac051_an_extracted_finding_used_as_evidence_exposes_its_quote_and_note_
         linked = any(note_ref_of(obj) for obj in nested)
         if not (quoted and linked):
             faults.append(
-                f"(quoted sentence: {quoted}, link to the full note: {linked}) "
-                f"{str(item)[:200]}"
+                f"(quoted sentence: {quoted}, link to the full note: {linked}) {str(item)[:200]}"
             )
     assert not faults, (
         f"patient {patient_uuid}: these evidence items drawn from an extracted finding "
@@ -264,18 +261,14 @@ def test_ac051_the_link_on_a_finding_resolves_to_the_full_note_text(
         f"{drop.imaging_source_ref}, so no link back to the full note can be followed"
     )
 
-    response = api.get(
-        f"/api/cases/{patient_uuid}/notes/{drop.imaging_source_ref}", headers=admin
-    )
+    response = api.get(f"/api/cases/{patient_uuid}/notes/{drop.imaging_source_ref}", headers=admin)
     assert response.status_code == 200, (
         f"following the link of a finding -- GET /api/cases/{patient_uuid}/notes/"
         f"{drop.imaging_source_ref} -- returned {response.status_code}: "
         f"{response.text[:200]}"
     )
     text = " ".join(strings(response.json()))
-    missing = [
-        name for name, sentence in drop.clue_sentences.items() if sentence not in text
-    ]
+    missing = [name for name, sentence in drop.clue_sentences.items() if sentence not in text]
     assert not missing, (
         f"the note the finding links to does not carry the full note text: the "
         f"sentences for {missing} are absent from {text[:300]!r}"
