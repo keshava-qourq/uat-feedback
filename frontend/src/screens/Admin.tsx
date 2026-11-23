@@ -332,6 +332,42 @@ function diffPack(saved, draft) {
 
 const ACTIVE = ["queued", "running"];
 
+// One background job on /api/admin/jobs: started on demand, then polled while it runs.
+function useAdminJob(kind, label) {
+  const [jobId, setJobId] = React.useState(null);
+  const [startError, setStartError] = React.useState("");
+
+  const start = useMutation({
+    mutationFn: () =>
+      apiFetch("/api/admin/jobs", { method: "POST", body: JSON.stringify({ kind }) }),
+    onSuccess: (data) => {
+      setStartError("");
+      setJobId(data.job_id);
+    },
+    onError: (err) => setStartError(err.message || "Could not start the " + label + "."),
+  });
+
+  const job = useQuery({
+    queryKey: ["admin-job", jobId],
+    queryFn: () => apiFetch("/api/admin/jobs/" + jobId),
+    enabled: jobId !== null,
+    retry: false,
+    refetchInterval: (query) => (JOB_ACTIVE.includes(query.state.data?.status) ? 1000 : false),
+  });
+
+  const data = job.data ?? null;
+  return {
+    start,
+    data,
+    running: start.isPending || (data ? JOB_ACTIVE.includes(data.status) : job.isFetching),
+    message: job.error
+      ? job.error.message || "Could not read the " + label + "."
+      : data && data.status === "failed"
+        ? "The " + label + " failed. Start it again to retry."
+        : startError,
+  };
+}
+
 function AdminScreen() {
   const { Button, Input, Label, Select, Table, THead, TBody, TR, TH, TD, Empty } = UI;
 
@@ -348,44 +384,45 @@ function AdminScreen() {
   });
 
   // De-duplication check: a real background job, started on demand and polled.
-  const [dedupJobId, setDedupJobId] = React.useState(null);
-  const [dedupError, setDedupError] = React.useState("");
-
-  const startDedup = useMutation({
-    mutationFn: () =>
-      apiFetch("/api/admin/jobs", {
-        method: "POST",
-        body: JSON.stringify({ kind: "dedup_check" }),
-      }),
-    onSuccess: (data) => {
-      setDedupError("");
-      setDedupJobId(data.job_id);
-    },
-    onError: (err) => setDedupError(err.message || "Could not start the de-duplication check."),
-  });
-
-  const dedupJob = useQuery({
-    queryKey: ["admin-job", dedupJobId],
-    queryFn: () => apiFetch("/api/admin/jobs/" + dedupJobId),
-    enabled: dedupJobId !== null,
-    retry: false,
-    refetchInterval: (query) => (JOB_ACTIVE.includes(query.state.data?.status) ? 1000 : false),
-  });
-
-  const dedupData = dedupJob.data ?? null;
-  const dedupRunning =
-    startDedup.isPending ||
-    (dedupData ? JOB_ACTIVE.includes(dedupData.status) : dedupJob.isFetching);
+  const dedup = useAdminJob("dedup_check", "de-duplication check");
+  const dedupData = dedup.data;
+  const dedupRunning = dedup.running;
   const dedupResult = dedupData && dedupData.status === "finished" ? dedupData.result : null;
-  const dedupMessage = dedupJob.error
-    ? dedupJob.error.message || "Could not read the de-duplication check."
-    : dedupData && dedupData.status === "failed"
-      ? "The de-duplication check failed. Start it again to retry."
-      : dedupError;
+  const dedupMessage = dedup.message;
   const dedupProgress =
     dedupRunning && dedupData && typeof dedupData.progress_pct === "number"
       ? dedupData.progress_pct
       : null;
+
+  // US-015: clue extraction over the notes — a background job, polled, plus its report.
+  const extract = useAdminJob("clue_extraction", "clue extraction");
+  const extractData = extract.data;
+  const extractRunning = extract.running;
+  const extractMessage = extract.message;
+
+  const extraction = useQuery({
+    queryKey: ["extraction-report"],
+    queryFn: () => apiFetch("/api/admin/extraction-report"),
+    retry: false,
+  });
+
+  const extractProgress =
+    extractData && typeof extractData.progress === "number" ? extractData.progress : null;
+  const extractFinished = extractData && extractData.status === "finished";
+
+  // The report is re-read once the job finishes, so the counts reflect the new run.
+  React.useEffect(() => {
+    if (extractFinished) extraction.refetch();
+  }, [extractFinished]);
+
+  const report52 = extraction.data ?? null;
+  const findings = Array.isArray(report52?.findings_by_clue_type)
+    ? report52.findings_by_clue_type
+    : [];
+  const maxFinding = findings.reduce((m, f) => Math.max(m, f.count || 0), 0);
+  const extractionReadError = extraction.error
+    ? extraction.error.message || "Could not read the extraction report."
+    : "";
 
   const settings = useQuery({
     queryKey: ["admin-settings"],
@@ -849,6 +886,113 @@ function AdminScreen() {
           </div>
         </section>
 
+        {/* US-015 — clue extraction over the notes */}
+        <section data-wf="b-ext-0" className="frame" aria-labelledby="extract-h">
+          <h2 id="extract-h" className="hd" style={{ fontSize: 18, textAlign: "center" }}>
+            Clue extraction report
+          </h2>
+          <Ornament />
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <Button
+              type="button"
+              className="btn btn-s"
+              onClick={() => extract.start.mutate()}
+              disabled={extractRunning}
+            >
+              {extractRunning ? "Extracting…" : "Run clue extraction"}
+            </Button>
+          </div>
+          <p
+            className="small muted num"
+            style={{ margin: "0 0 16px", textAlign: "center" }}
+            role="status"
+            aria-live="polite"
+          >
+            {extractRunning
+              ? "Clue extraction running" +
+                (extractProgress === null
+                  ? "…"
+                  : " · " +
+                    Math.round(extractProgress <= 1 ? extractProgress * 100 : extractProgress) +
+                    "%")
+              : extractFinished
+                ? "Clue extraction finished."
+                : "Not run yet. Start the extraction to read the notes for clues."}
+          </p>
+          {extractMessage ? (
+            <p className="small" role="alert" style={{ margin: "0 0 16px", textAlign: "center" }}>
+              {extractMessage}
+            </p>
+          ) : null}
+          {extractionReadError ? (
+            <p className="small" style={{ margin: "0 0 16px", textAlign: "center" }}>
+              Could not read the extraction report. {extractionReadError}
+            </p>
+          ) : (
+            <>
+              <div style={{ textAlign: "center", marginBottom: 16 }}>
+                <span className="eyebrow">Notes processed</span>
+                <span className="figure" style={{ display: "block" }}>
+                  {report52 ? n0(report52.notes_processed) : "—"}
+                </span>
+                <span className="small muted" style={{ display: "block", marginTop: 4 }}>
+                  {report52 && report52.dataset_version
+                    ? "Dataset " + report52.dataset_version
+                    : "No dataset version recorded"}
+                </span>
+              </div>
+              <div className="scroll">
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Clue type</TH>
+                      <TH className="num-col">Findings</TH>
+                      <TH>Share</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {findings.length ? (
+                      findings.map((f) => (
+                        <TR key={f.clue_type}>
+                          <TD>{f.clue_type}</TD>
+                          <TD className="num-col num">{n0(f.count)}</TD>
+                          <TD>
+                            <span className="bar" style={{ display: "block", minWidth: 80 }}>
+                              <span
+                                style={{
+                                  width: maxFinding
+                                    ? Math.round((f.count / maxFinding) * 100) + "%"
+                                    : "0%",
+                                }}
+                              />
+                            </span>
+                          </TD>
+                        </TR>
+                      ))
+                    ) : (
+                      <TR>
+                        <TD colSpan={3} className="muted">
+                          No findings recorded yet.
+                        </TD>
+                      </TR>
+                    )}
+                  </TBody>
+                </Table>
+              </div>
+              {report52 && report52.caveat ? (
+                <p className="small" style={{ margin: "16px 0 0" }}>
+                  {report52.caveat}
+                </p>
+              ) : null}
+              {report52 && report52.notice ? (
+                <p className="small muted" style={{ margin: "8px 0 0" }}>
+                  {report52.notice}
+                </p>
+              ) : null}
+            </>
+          )}
+        </section>
+
         {/* Row 4 */}
         <div className="grid grid-cols-12 gap-8">
           <section
@@ -864,7 +1008,7 @@ function AdminScreen() {
               <Button
                 type="button"
                 className="btn btn-s"
-                onClick={() => startDedup.mutate()}
+                onClick={() => dedup.start.mutate()}
                 disabled={dedupRunning}
               >
                 {dedupRunning ? "Checking…" : "Run de-duplication check"}

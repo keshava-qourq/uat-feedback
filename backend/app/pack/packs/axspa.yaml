@@ -195,6 +195,50 @@ copy:
   insufficient_history_detail: Records before your earliest available visit are not reachable, so some of the picture is missing.
   next_step_prompt: Bring this summary to your next appointment and ask about the suggested tests.
   disclaimer: This is not a diagnosis. Only a clinician can tell you what your symptoms mean.
+  extraction_caveat: The notes in this dataset are generated from templates, which makes clue extraction easier here than it would be on real clinical text.
+
+# The clues the free-text extractor looks for in clinic notes and imaging
+# reports. Data, not code: the extractor reads this section generically and
+# names no clue of its own (NFR-019). `values` (when present) is the closed
+# set of finding_value the extractor may return for that clue.
+#
+# `match_any` is the wording the deterministic fallback matches when no
+# language model is configured: a list of groups, each group a list of terms
+# that must all appear in one sentence of the note. `value_terms` names, per
+# allowed finding_value, the wording that decides it (first match wins).
+free_text_clues:
+  sacroiliitis_wording:
+    label: Wording describing sacroiliitis or sacroiliac joint inflammation
+    description: A sentence stating that the sacroiliac joints are inflamed, or describing sacroiliitis in any wording.
+    match_any:
+      - [sacroiliitis]
+      - [sacroiliac, inflam]
+  iliac_side_only_sclerosis:
+    label: Sclerosis confined to the iliac side of the joint
+    description: A sentence stating that sclerosis is present on the iliac side only.
+    match_any:
+      - [sclerosis, iliac]
+  erosions:
+    label: Presence or absence of erosions
+    description: A sentence stating that erosions are present, or stating that there are none.
+    values: [present, absent]
+    match_any:
+      - [erosion]
+    value_terms:
+      absent:
+        - [no erosion]
+        - [without erosion]
+        - [erosions are not]
+      present:
+        - [erosion]
+  postpartum_timing:
+    label: Symptoms described in relation to a recent pregnancy or delivery
+    description: A sentence placing the symptoms after a delivery or in the postpartum period.
+    match_any:
+      - [postpartum]
+      - [post-partum]
+      - [after her delivery]
+      - [after delivery]
 
 prohibited_terms:
   - axial spondyloarthritis

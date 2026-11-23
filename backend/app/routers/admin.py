@@ -21,11 +21,14 @@ from sqlalchemy.orm import Session
 
 from app import jobs
 from app.auth import require_admin, require_api_access
+from app.clue_extraction import run_clue_extraction
 from app.config import database_url_configured, llm_configured
 from app.database import get_db
 from app.dataset import active_dataset_version
 from app.dedup_check import run_dedup_check
+from app.extraction_report import extraction_report
 from app.models import User
+from app.notice import with_notice
 from app.passwords import issue_password_set_token, send_password_set_email
 from app.services import configured_services, database_reachable
 from app.sessions import revoke_all_sessions
@@ -70,7 +73,12 @@ class StartJobRequest(BaseModel):
 
 
 #: kind -> (the function the worker runs, the queue it runs on).
-JOB_FUNCTIONS: dict[str, Any] = {"dedup_check": run_dedup_check}
+JOB_FUNCTIONS: dict[str, Any] = {
+    "dedup_check": run_dedup_check,
+    "clue_extraction": run_clue_extraction,
+    # The spec's own name for the same job (app.jobs.JOB_KINDS).
+    "extraction": run_clue_extraction,
+}
 
 FINISHED_STATUSES = frozenset({"finished", "failed"})
 
@@ -122,6 +130,15 @@ def get_job(
         "progress_pct": state.get("progress_pct"),
         "result": state.get("result"),
     }
+
+
+@router.get("/extraction-report")
+def extraction_report_read(
+    admin: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """AC-052: notes processed, findings per clue type, and the caveat."""
+    return with_notice(extraction_report(db))
 
 
 class CreateUserRequest(BaseModel):
