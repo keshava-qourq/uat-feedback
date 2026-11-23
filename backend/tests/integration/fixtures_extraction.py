@@ -109,9 +109,7 @@ class ExtractionDrop:
                 "MRI of the sacroiliac joints demonstrates active sacroiliitis "
                 "with bone marrow oedema."
             ),
-            "iliac_side_sclerosis": (
-                "Sclerosis is confined to the iliac side of the joint."
-            ),
+            "iliac_side_sclerosis": ("Sclerosis is confined to the iliac side of the joint."),
             "erosions": "No erosions are identified.",
             "postpartum_timing": (
                 "Symptoms began three months postpartum after her second delivery."

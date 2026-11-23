@@ -79,9 +79,7 @@ def findings(payload: Any) -> list[dict]:
     """Every object in `payload` that looks like an extracted clue finding:
     it carries a quoted sentence and a clue type."""
     return [
-        obj
-        for obj in objects(payload)
-        if text_of(obj, QUOTE_KEYS) and text_of(obj, CLUE_TYPE_KEYS)
+        obj for obj in objects(payload) if text_of(obj, QUOTE_KEYS) and text_of(obj, CLUE_TYPE_KEYS)
     ]
 
 

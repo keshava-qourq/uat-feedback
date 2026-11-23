@@ -243,6 +243,45 @@ def test_ac051_an_extracted_finding_used_as_evidence_exposes_its_quote_and_note_
     )
 
 
+def test_ac051_the_link_on_a_finding_resolves_to_the_full_note_text(
+    api: TestClient,
+) -> None:
+    """AC-051: the link a finding carries is not decoration -- following it returns
+    the full text of the note the quoted sentence was taken from."""
+    admin = admin_headers(api)
+    drop = extraction_cohort(api, admin)
+    uuids = patient_uuids(api, admin, drop)
+    job = extraction_run(api, admin)
+    patient_uuid = uuids[drop.clue_patient]
+
+    found = [
+        f
+        for f in _patient_findings(api, admin, patient_uuid, job)
+        if note_ref_of(f) == drop.imaging_source_ref
+    ]
+    assert found, (
+        f"no finding of patient {drop.clue_patient} references the imaging report "
+        f"{drop.imaging_source_ref}, so no link back to the full note can be followed"
+    )
+
+    response = api.get(
+        f"/api/cases/{patient_uuid}/notes/{drop.imaging_source_ref}", headers=admin
+    )
+    assert response.status_code == 200, (
+        f"following the link of a finding -- GET /api/cases/{patient_uuid}/notes/"
+        f"{drop.imaging_source_ref} -- returned {response.status_code}: "
+        f"{response.text[:200]}"
+    )
+    text = " ".join(strings(response.json()))
+    missing = [
+        name for name, sentence in drop.clue_sentences.items() if sentence not in text
+    ]
+    assert not missing, (
+        f"the note the finding links to does not carry the full note text: the "
+        f"sentences for {missing} are absent from {text[:300]!r}"
+    )
+
+
 # ------------------------------------------------------------- AC-052 / NFR-006
 
 
