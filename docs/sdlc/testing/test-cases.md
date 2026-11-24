@@ -3,9 +3,9 @@
 > Maintained by QuorQ AI SDLC. Text between `sdlc:auto` markers is regenerated; anything outside them is yours and is kept.
 
 <!-- sdlc:auto:start summary -->
-380 tests · Passed 379 · Failed 0 · Skipped 0 · Not run 1
+389 tests · Passed 388 · Failed 0 · Skipped 0 · Not run 1
 
-Acceptance criteria covered: 35/146 · passing: 35/146
+Acceptance criteria covered: 39/153 · passing: 39/153
 <!-- sdlc:auto:end summary -->
 
 <!-- sdlc:auto:start tests -->
@@ -403,6 +403,27 @@ Acceptance criteria covered: 35/146 · passing: 35/146
 | AC-056 | test_ac056_there_is_no_default_or_placeholder_credential | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
 | AC-057, NFR-011 | test_ac057_nfr011_settings_mask_both_credentials_and_report_their_status | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
 | AC-057 | test_ac057_settings_report_not_configured_with_no_llm_credential | Integration | Passed | `backend/tests/unit/test_credential_configuration.py` |
+
+## Sprint 4
+
+### US-010: Evaluate ASAS referral criteria and SPARTAN points
+
+| Criteria | Test | Level | Result | File |
+|---|---|---|---|---|
+| AC-030 | CaseSummary criteria panel > [AC-030] a failed read shows the API's detail instead of an empty panel | Unit | Passed | `frontend/src/screens/CaseSummary.test.tsx` |
+| AC-030 | CaseSummary criteria panel > [AC-030] lists each criterion and point item with its met / not_met / unknown status | Unit | Passed | `frontend/src/screens/CaseSummary.test.tsx` |
+| AC-030 | CaseSummary criteria panel > [AC-030] shows the SPARTAN total against the threshold | Unit | Passed | `frontend/src/screens/CaseSummary.test.tsx` |
+| AC-031 | CaseSummary criteria panel > [AC-031] opening a met item reveals the named evidence with its date and source tag | Unit | Passed | `frontend/src/screens/CaseSummary.test.tsx` |
+| AC-032 | CaseSummary criteria panel > [AC-032] opening an unknown item reveals the 'needed' text | Unit | Passed | `frontend/src/screens/CaseSummary.test.tsx` |
+
+### US-015: Extract buried clues from notes and imaging reports with a quoted source
+
+| Criteria | Test | Level | Result | File |
+|---|---|---|---|---|
+| AC-052 | Admin clue-extraction report > [AC-052] a 403 on the report shows the API's detail, not a blank panel | Unit | Passed | `frontend/src/screens/AdminExtraction.test.tsx` |
+| AC-052 | Admin clue-extraction report > [AC-052] shows notes processed, findings per clue type and the templated-text caveat | Unit | Passed | `frontend/src/screens/AdminExtraction.test.tsx` |
+| NFR-006 | Admin clue-extraction report > [NFR-006] a failed extraction job says so and offers the retry | Unit | Passed | `frontend/src/screens/AdminExtraction.test.tsx` |
+| NFR-006 | Admin clue-extraction report > [NFR-006] starting the job posts kind clue_extraction and shows polled progress | Unit | Passed | `frontend/src/screens/AdminExtraction.test.tsx` |
 
 ## Project setup
 

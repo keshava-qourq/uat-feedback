@@ -61,19 +61,20 @@ Capacity: 20 points · Committed: 19
 
 Counter-evidence caps, tier output with Insufficient history, clinician worklist
 
-Capacity: 20 points · Committed: 18
+Capacity: 20 points · Committed: 20
 
 | Key | Type | Title | Points | Role | Depends on |
 |---|---|---|---|---|---|
 | US-011 | Story | Cap the tier with counter-evidence and name the alternative | 8 | backend-agent | US-010, US-009, US-015, US-007 |
 | US-012 | Story | Output a tier, never a bare score, with an explicit Insufficient history state | 5 | backend-agent | US-010, US-011, US-009 |
 | US-018 | Story | Work a worklist sorted by status with the reason and reachable history | 5 | frontend-agent | US-012, US-031 |
+| US-045 | Story | Remove the sign-in form from the /start entry screen | 2 | frontend-agent | — |
 
 ## Sprint 6: Sprint 6
 
 One-page case summary, evidence-to-source links, patient invite entry
 
-Capacity: 20 points · Committed: 18
+Capacity: 20 points · Committed: 20
 
 | Key | Type | Title | Points | Role | Depends on |
 |---|---|---|---|---|---|
@@ -82,6 +83,7 @@ Capacity: 20 points · Committed: 18
 | ↳ US-019-T2 | Task | Build the one-page case summary layout | — | frontend-agent | — |
 | US-020 | Story | Link every evidence item to the source record behind it | 5 | frontend-agent | US-019 |
 | US-032 | Story | Enter as a patient through a tokenised invite link | 5 | backend-agent | US-026, US-031 |
+| US-046 | Story | Confirm demo entry and clinician sign-in still work after the form is removed | 2 | qa-agent | — |
 
 ## Sprint 7: Sprint 7
 

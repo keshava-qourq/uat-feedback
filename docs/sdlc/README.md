@@ -5,7 +5,7 @@
 <!-- sdlc:auto:start overview -->
 PRD: Diagnostic Odyssey Copilot — axSpA Proof of Concept
 
-**Documentation version:** v17
+**Documentation version:** v18
 <!-- sdlc:auto:end overview -->
 
 ## Contents
@@ -13,7 +13,7 @@ PRD: Diagnostic Odyssey Copilot — axSpA Proof of Concept
 <!-- sdlc:auto:start contents -->
 | Document | State |
 |---|---|
-| [Requirements](requirements/README.md) | v1 approved |
+| [Requirements](requirements/README.md) | v2 approved |
 | [Architecture](architecture/README.md) | 30 entries |
 | [Planning](planning/README.md) | 26 entries |
 | [Development](development/README.md) | 3 entries |
@@ -27,10 +27,10 @@ PRD: Diagnostic Odyssey Copilot — axSpA Proof of Concept
 | [Developer guide](development/developer-guide.md) | generated |
 | [API reference](development/api-reference.md) | 36 routes |
 | [Test report](testing/test-report.md) | not run yet |
-| [Tests](testing/test-cases.md) | 380 tests |
+| [Tests](testing/test-cases.md) | 389 tests |
 | [Deployment guide](deployment/deployment-guide.md) | deployed |
 | [Runbook](deployment/runbook.md) | deployed |
 | [Release notes](deployment/release-notes.md) | 9 releases |
-| [Traceability matrix](traceability-matrix.md) | 44 requirements |
-| [Changelog](CHANGELOG.md) | 17 versions |
+| [Traceability matrix](traceability-matrix.md) | 46 requirements |
+| [Changelog](CHANGELOG.md) | 18 versions |
 <!-- sdlc:auto:end contents -->

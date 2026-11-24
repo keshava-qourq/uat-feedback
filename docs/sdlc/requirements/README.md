@@ -7,51 +7,62 @@
 
 ### REQ-001 · approved · source: requirements:technology_stack
 
-The product owner approved an exact technology stack to design against, with no substitutions permitted. It covers backend, cloud, database and frontend. Each choice is justified against existing assets and the demo's performance budget.
+The product owner approved a fixed four-part technology stack: FastAPI 0.115 backend, AWS cloud, PostgreSQL 16 database and React 19 frontend. The requirement states these must be designed against exactly, with no substitutions. Each choice is tied to work already done or to the demo's constraints.
 
-Approved stack (design against exactly these; do not substitute):
-- Backend: FastAPI 0.115 — scoring engine, leakage-safe cutoff logic and evaluation metrics already exist in Python (baseline.py, dataset tooling). Keeps the condition pack, ingest of ~800k rows of CSV/NDJSON, de-duplication against encounter_truth.csv and the metrics view in one language, so clinical logic moves across rather than being re-implemented and re-validated.
-- Cloud: AWS — standard managed web app in a US region: managed Postgres, the app, and object storage for uploaded dataset files. Named environment clinical advisors and investors expect; clearest path to a HIPAA-eligible configuration and the deferred SOC 2 work, so the PoC need not be rebuilt when real patient data arrives.
-- Database: PostgreSQL 16 — the unified event model (one row per fact per source, provenance on every row) is a relational table, and 'every flag links back to the record that produced it' is a join. Holds 572k events, 167k truth rows and 40k notes; indexes by patient and event_time so a persona renders inside the 60-second demo budget; full-text search covers finding wording inside notes without a separate search engine.
-- Frontend: React 19 — one codebase serves a one-question-per-screen mobile intake/timeline and a dense desktop clinician worklist/case summary. Supports the odyssey replay animation, evidence chips that drill into the timeline in one click, and QR share. Matches the assumption already recorded for this build.
+Approved stack — design against exactly these; do not substitute:
 
-**Related:** REQ-002, REQ-003
+- Backend: FastAPI 0.115. The scoring engine, the leakage-safe cutoff logic and the evaluation metrics are already written and reasoned about in Python (baseline.py and the dataset tooling). FastAPI keeps the condition pack, the ingest of ~800k rows of CSV/NDJSON, the de-duplication against encounter_truth.csv and the metrics view in the same language, so clinical logic moves across rather than being re-implemented and re-validated in another language.
+- Cloud: AWS. A standard managed web app in a US region: managed Postgres, the app itself, and object storage for the dataset files uploaded once. Named as the environment clinical advisors and investors expect, and the clearest path to the HIPAA-eligible configuration and SOC 2 work deliberately deferred — so today's PoC does not have to be rebuilt when real patient data eventually arrives.
+- Database: PostgreSQL 16. The unified event model (one row per fact per source, provenance on every row) is a relational table, and the central product promise — every flag links back to the record that produced it — is a join. Postgres holds 572k events, 167k truth rows and 40k notes, indexes them by patient and event_time so a persona renders inside the 60-second demo budget, and its full-text search covers finding wording inside notes without a separate search engine.
+- Frontend: React 19. One codebase serves two different screens: a one-question-per-screen intake and timeline that work on a phone, and a dense clinician worklist and case summary read in under two minutes on a desktop. React handles both in a single responsive app; the odyssey replay animation, evidence chips that drill into the timeline in one click, and QR share are well-trodden there. It also matches the assumption already recorded for this build.
+
+**Related:** REQ-002, REQ-003, NFR-005, NFR-023
 
 ### REQ-002 · approved · source: requirements:services
 
-Five runtime services were approved and must all appear in runtime_needs. They cover LLM extraction, background queuing, caching, object storage and outbound email. Credentials for them are supplied as deployment configuration only.
+Five runtime services were approved and must all be included in runtime_needs: Anthropic (Claude) as the AI provider, Redis as both queue and cache, Amazon S3 for file storage and SendGrid for email. Each carries a stated purpose tied to a product capability. The required configuration keys are listed and supplied as deployment configuration only.
 
 Approved services (include exactly these in runtime_needs):
-- AI provider: Anthropic (Claude), SaaS, env ANTHROPIC_API_KEY — reads the 40k free-text notes and imaging reports and pulls out deciding details (iliac-side-only sclerosis, no erosions, postpartum timing), returning the exact quoted sentence so every clue keeps its source link.
-- Queue: Redis as a queue, container redis:7-alpine — dataset load, encounter de-duplication and running the LLM extractor over 40k notes take minutes; run as background jobs with progress so admin ingest and full-cohort metrics never block a screen.
-- Cache: Redis, container redis:7-alpine — keeps computed worklist, persona summaries and evaluation numbers warm so a scripted demo opens a case inside the 60-second budget.
-- File storage: Amazon S3, SaaS, env AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, S3_BUCKET — holds uploaded dataset files (including compressed FHIR NDJSON) and generated referral-packet PDFs, keeping large files out of the database and off the app server disk.
-- Email: SendGrid, SaaS, env SENDGRID_API_KEY — tokenised invite links for patients and clinical advisors, plus password resets; the only outbound mail needed.
 
-API keys the app needs: ANTHROPIC_API_KEY, AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY, REDIS_URL, S3_BUCKET, SENDGRID_API_KEY. Values are supplied as deployment configuration; see NFR-011.
+- AI provider — Anthropic (Claude), SaaS, env ANTHROPIC_API_KEY. Reads the 40k free-text notes and imaging reports and pulls out the deciding details (iliac-side-only sclerosis, no erosions, postpartum timing), returning the exact quoted sentence so every clue keeps its source link.
+- Queue — Redis as a queue, container redis:7-alpine. Loading the dataset, de-duplicating encounters and running the LLM extractor over 40k notes takes minutes, not seconds; these run as background jobs with progress shown, so admin ingest and the full-cohort metrics run never block a screen.
+- Cache — Redis, container redis:7-alpine. Keeps the computed worklist, persona summaries and evaluation numbers warm so the scripted demo opens a case well inside the 60-second budget instead of recomputing on every click.
+- File storage — Amazon S3, SaaS, env AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, S3_BUCKET. Holds the uploaded dataset files (including the compressed FHIR NDJSON) and the generated referral-packet PDFs, so large files sit in storage rather than in the database or on the app server's disk.
+- Email — SendGrid, SaaS, env SENDGRID_API_KEY. Sends the tokenised invite links that let patients and clinical advisors into the invitation-only PoC, plus password resets — the only outbound mail the product needs.
 
-**Related:** REQ-001, NFR-011, NFR-022
+Configuration keys the app needs (names only; values are deployment configuration and must never appear in source control, logs or on any screen — see NFR-011): ANTHROPIC_API_KEY, AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY, REDIS_URL, S3_BUCKET, SENDGRID_API_KEY. Values are supplied as placeholders such as <llm-api-key> and <database-connection-string>.
+
+**Related:** REQ-001, NFR-006, NFR-011, NFR-022
 
 ### REQ-003 · approved · source: requirements:scope
 
-Scope is a lightweight, invitation-only internal proof of concept for a single axSpA condition pack running on supplied synthetic data. In-scope capabilities span ingest, unified timeline, rules scoring, clinician case view, demo mode and guardrails. A defined list of integrations and certifications is explicitly excluded.
-
-Delivery scope: lightweight. Requirements version: 1. Status: approved.
+Scope is an invitation-only internal proof of concept for an axSpA condition pack running wholly on supplied synthetic data. In scope: dataset ingest, unified timeline with provenance and gaps, leakage-safe rules-based tiering, clinician case summary and worklist, demo personas and an evaluation report. Explicitly out of scope: a synthetic data generator, a native mobile app, live EHR/payer integrations, ordering/prescribing/scheduling/billing, certifications and a second condition pack.
 
 In scope (capabilities):
 - Admin ingest of the supplied CSV, JSON and FHIR NDJSON dataset files.
-- Unified timeline tagged Record / Insurance claim / You told us; visible gaps where care was self-paid, unconnected or pre-coverage.
+- Unified timeline tagged Record / Insurance claim / You told us.
+- Visible gaps where care was self-paid, unconnected or pre-coverage.
 - Pluggable axSpA condition pack: codes, signals, criteria, workup, copy, ASAS referral criteria and SPARTAN points evaluation.
 - Counter-evidence rules that cap the tier and name the alternative.
 - Leakage-safe scoring as of each patient's evaluation cutoff date.
 - Tier output: High / Moderate / Low / Insufficient history, never a score.
-- One-page clinician case summary readable in under two minutes; top evidence items linked to their source record; evidence against and conflicting labels already in the record; criteria met and missing side by side; one-click drill into the full timeline; suggested workup with reasoning per item.
-- Worklist sorted by status with reason and reachable history; Insufficient-history screen with a 'what we still need' list.
-- Demo persona picker over the six hero personas. Clinician sign-in.
+- One-page clinician case summary readable in under two minutes.
+- Top evidence items linked to the source record behind each.
+- Evidence against, and conflicting labels already in the record.
+- Criteria met and criteria missing, shown side by side.
+- One-click drill from the case summary into the full timeline.
+- Suggested workup with the reasoning for each item.
+- Worklist sorted by status with reason and reachable history.
+- Insufficient-history screen with a "what we still need" list.
+- Demo persona picker over the six hero personas.
+- Clinician sign-in.
+- Rules-only scoring in the product; no model trained in the app.
+- Optional per-patient model score column shown when the dataset supplies one.
 - Code lists (ICD-10, CPT, LOINC, HLA-B27, ATC) as editable pack configuration.
 - EHR/claim encounter de-duplication checked against encounter_truth.csv.
 - Insufficient history set by a reachable-history threshold.
-- One responsive web app: patient mobile-first, clinician desktop. No payments or billing; invitation-only internal proof of concept.
+- One responsive web app: patient mobile-first, clinician desktop.
+- No payments or billing; invitation-only internal proof of concept.
 
 Out of scope — do not design or build:
 - Synthetic patient data generator.
@@ -61,415 +72,527 @@ Out of scope — do not design or build:
 - SOC 2 / HITRUST certification and formal FDA submission.
 - A second condition pack (lupus, endometriosis) in this release.
 
-CONFLICT RECORDED (not resolved): the scope capability list states 'Rules-only scoring in the product; no model trained in the app' with an 'optional per-patient model score column shown when the dataset supplies one', while the functional requirements for the scoring engine describe an in-system offline training job, threshold tuning and live scoring from a stored model artefact. Both versions are recorded here.
+Note: the input records "Rules-only scoring in the product; no model trained in the app" in scope while the scoring-engine feature group also describes an offline training job and live scoring from a stored model artefact; both statements are recorded as given (see REQ-013).
 
-**Related:** REQ-001, REQ-002
+Status: approved. Requirements version 1. Delivery scope: lightweight.
 
-### REQ-F-001 · approved · source: requirements:feature:Sign-in & invites
+**Related:** REQ-001, REQ-002, NFR-018, NFR-025, NFR-026
 
-Access to the product is by invitation only, with two roles: clinician and patient. Clinicians sign in with email and password; patients enter through a single-use tokenised link. Clinicians can issue invites and track their state.
+### REQ-010 · approved · source: requirements:feature:Sign-in & invites
+
+Access to the proof of concept is by invitation only, with two roles. Clinicians sign in with email and password and land on their worklist, with decisions attributed to their account. Patients enter through a single-use tokenised invite link generated by a clinician, scoped to exactly one synthetic patient's data.
 
 Requirements in this group:
-- Clinician sign-in and sign-out: sign in with email address and password, land on the worklist, every recorded decision attributed to that account. Sign-out ends the session immediately. An administrator can deactivate an account so it can no longer be used.
-- Patient entry by invite link: an invited patient opens the link and gets access to exactly one synthetic patient's own data, with the option to set a password to return. An expired, revoked or already-used link is refused with a plain message and shows no patient data.
-- Clinician invites a patient: from the worklist or an open case a clinician generates a single-use invite link and is shown it to send on. The patient's row then shows whether the invite is not yet opened, opened, or the intake is completed.
+
+- Clinician sign-in and sign-out: clinicians sign in with their email address and a password and land on their worklist; every decision they record is attributed to their account. Signing out ends the session straight away. An administrator can deactivate an account so it can no longer be used.
+- Patient entry by invite link: an invited patient opens the link they were sent and is given access to exactly one synthetic patient's own data, with the option to set a password so they can return. An expired, revoked or already-used link is refused with a plain message and shows no patient data.
+- Clinician invites a patient: from the worklist or an open case, a clinician generates a single-use invite link for a patient and is shown it to send on. The patient's row then shows whether the invite is not yet opened, opened, or the intake is completed.
+
+Related qualities: sessions end on sign-out, idle expiry and deactivation (NFR-007); passwords held only as salted hashes with new accounts created without a usable password, set as <set-at-first-login> (NFR-008); unguessable, scoped, expiring and revocable tokens (NFR-009); no unauthenticated or self-service access (NFR-010); email and password only, no SSO (NFR-030, accepted risk).
 
 **Related:** NFR-007, NFR-008, NFR-009, NFR-010, NFR-030
 
-### REQ-F-002 · approved · source: requirements:feature:Patient app
+### REQ-011 · approved · source: requirements:feature:Patient app
 
-The patient side organises a person's own data and never shows a status, score or suspected diagnosis. It covers the unified timeline with visible gaps, a one-question-per-screen symptom intake, a plain-language visit-prep sheet, sharing by link or code, and a post-workup update.
+The patient side is a mobile-first view of the patient's own data only: a merged chronological health story, visible gaps in the record, a one-question-per-screen symptom intake, a plain-language visit-prep sheet, a revocable share link or code, and a non-alarming update when workup results come back. No status, score or suspected diagnosis appears anywhere on the patient side.
 
 Requirements in this group:
-- Unified health story timeline: records, insurance claims and the patient's own answers merged into one chronological list; each item has a date, a plain-language description and a source tag reading Record, Insurance claim or You told us. Tapping an item shows the provider or organisation where known. No risk status or suspected diagnosis appears anywhere on the patient side.
-- Visible gaps in the history: coverage gaps and pre-coverage periods drawn as visible gaps labelled with the reason available from the data; self-paid care reported at intake shown as a You told us item marked as not confirmed by any record or claim. When reachable history is shorter than the reported symptom duration, a banner states how far back the history goes and invites the patient to add what is missing.
-- Symptom intake one question at a time: the condition pack's intake questions, one per screen, each with a short 'why we ask' explanation — stiffness, night pain, response to anti-inflammatories, alternating buttock pain, family history, a body map, self-paid visits. Answers saved as the patient goes so they can leave and resume at the next unanswered question. Each completed answer becomes a patient-sourced event tagged You told us.
+
+- Unified health story timeline: records, insurance claims and the patient's own answers merged into one chronological list; each item carries a date, a plain-language description and a source tag reading Record, Insurance claim or You told us. Tapping an item shows the provider or organisation where known. No risk status or suspected diagnosis appears anywhere on the patient side.
+- Visible gaps in the history: coverage gaps and pre-coverage periods are drawn as visible gaps labelled with the reason available from the data. Self-paid care reported at intake appears as a You told us item marked as not confirmed by any record or claim. When reachable history is shorter than the reported symptom duration, a banner states how far back the history goes and invites the patient to add what is missing.
+- Symptom intake one question at a time: the condition pack's intake questions are asked one per screen, each with a short "why we ask" explanation, covering stiffness, night pain, response to anti-inflammatories, alternating buttock pain, family history, a body map and self-paid visits. Answers are saved as the patient goes so they can leave and resume at the next unanswered question. Each completed answer becomes a patient-sourced event tagged You told us.
 - Plain-language visit-prep sheet: a plain-language summary of the history, the patterns worth raising with the dates and sources behind them, and suggested questions to ask the clinician. Printable or saveable as a document.
-- Share the case by link or code: from visit prep the patient creates an unguessable share link, also shown on screen as a scannable code, letting a signed-in clinician open the full clinician case. The patient can see that a link is active and revoke it, after which it no longer grants access; each access is recorded against the case.
-- Update after tests come back: when a clinician records a negative workup outcome, the patient sees a plain, non-alarming update naming which tests were done, that they came back negative, and what the clinician suggested next. The tests and their results also appear on the timeline tagged Record with their dates.
+- Share the case by link or code: from visit prep the patient can create an unguessable share link, also shown on screen as a scannable code, that lets a signed-in clinician open the full clinician case. The patient can see that a link is active and revoke it, after which it no longer grants access. Each access is recorded against the case.
+- Update after tests come back: when a clinician records a negative workup outcome, the patient sees a plain, non-alarming update naming which tests were done, that they came back negative, and what the clinician suggested next. The tests and their results also appear on the patient's timeline tagged Record with their dates.
 
-**Related:** NFR-003, NFR-004, NFR-012, NFR-016, NFR-024
+**Related:** NFR-003, NFR-004, NFR-009, NFR-012, NFR-016, NFR-024
 
-### REQ-F-003 · approved · source: requirements:feature:Clinician worklist & cases
+### REQ-012 · approved · source: requirements:feature:Clinician worklist & cases
 
-The clinician desktop experience: a worklist sorted by status, a one-page case summary with evidence for and against, criteria met and missing, and a suggested workup. Clinicians can drill into the timeline, record decisions and outcomes, open an Insufficient-history detail screen and export a referral packet.
+Clinicians work from a status-ordered worklist into a one-page case summary that shows status, rationale, evidence for and against, conflicting labels, criteria met and missing, and a suggested workup. Every evidence item links back to its source record and drills into the timeline in one click. Clinicians can record a decision, record a workup outcome, see a dedicated insufficient-history screen, and export a referral packet.
 
 Requirements in this group:
-- Worklist sorted by status: assigned synthetic patients listed with status, a one-line reason and how much history is reachable as a span of time. Ordered High, then Moderate, then Insufficient history, then Low; filterable by status; selecting a row opens that patient's case summary.
-- One-page case summary: status and one-line rationale in a top card, with top evidence, evidence against, conflicting labels already in the record, criteria met and criteria missing side by side, and the suggested workup, all reachable without leaving the page. For a look-alike case the named alternative explanation is displayed alongside the evidence against.
-- Evidence linked to its source: every evidence item carries a date, a source tag of Record, Insurance claim or You told us, and a link resolving to the specific source record or quoted note sentence. Clicking an item opens the full timeline positioned at that item in one click.
-- Suggested workup with reasoning: for patients above Insufficient history, the workup items configured in the condition pack, each with a patient-specific reason referencing the evidence or missing criterion that prompted it. Items already performed within reachable history shown as done with date and result. Labelled as information to consider; no order, prescription, appointment or bill is raised from it.
-- Record a decision with a reason: agree, disagree or need more info recorded on an open case with a reason, saved with clinician identity, timestamp and the status shown at the time. Visible on the case and in the worklist; a new decision supersedes the earlier one while keeping it in history.
-- Insufficient-history detail screen: for a patient with too little data, a dedicated screen showing the reachable history span, the reason it is limited (e.g. an insurer or employer change) and a 'what we still need' list. Each entry names a concrete missing input — the patient's symptom intake, records before a stated date, a specific test — and what it would resolve.
-- Export a referral packet: a printable or PDF packet containing the status, evidence for and against, conflicting labels, criteria met and missing, the suggested workup with reasoning and the relevant timeline extract. Every cited item shows its date and source tag.
-- Record a workup outcome: results recorded against the case with the date and the recording clinician. A recorded negative outcome lowers the status per the condition pack's rules, shows the outcome as the reason for the change, and keeps the prior status visible in the case history.
+
+- Worklist sorted by status: assigned synthetic patients listed with status, a one-line reason and reachable history as a span of time. Order: High, then Moderate, then Insufficient history, then Low. Filterable by status; selecting a row opens that patient's case summary.
+- One-page case summary: status and a one-line rationale in a top card; top evidence, evidence against, conflicting labels already in the record, criteria met and criteria missing side by side, plus the suggested workup — all reachable without leaving the page. For a look-alike case the named alternative explanation is displayed alongside the evidence against.
+- Evidence linked to its source: every evidence item carries a date, a source tag of Record, Insurance claim or You told us, and a link resolving to the specific source record or quoted note sentence. Clicking an item opens the full timeline positioned at that item in a single click.
+- Suggested workup with reasoning: for patients above Insufficient history, the case lists the pack's workup items, each with a patient-specific reason referencing the evidence or missing criterion that prompted it. Items already performed within reachable history are shown as done with date and result. The list is labelled as information to consider — no order, prescription, appointment or bill is raised from it.
+- Record a decision with a reason: a clinician records agree, disagree or need more info with a reason, saved with their identity, the timestamp and the status shown at the time. The decision and who recorded it are visible on the case and in the worklist; a new decision supersedes the earlier one while keeping it in history.
+- Insufficient-history detail screen: for a patient with too little data, the case opens a dedicated screen showing the reachable history span, the reason it is limited (e.g. an insurer or employer change) and a "what we still need" list. Each entry names a concrete missing input — the patient's symptom intake, records before a stated date, or a specific test — and states what it would resolve.
+- Export a referral packet: from an open case, a printable or PDF packet containing status, evidence for and against, conflicting labels, criteria met and missing, the suggested workup with reasoning and the relevant timeline extract. Every cited item shows its date and source tag.
+- Record a workup outcome: results of the suggested workup recorded against the case with the date and the recording clinician. A recorded negative outcome lowers the status according to the condition pack's rules, shows the outcome as the reason for the change, and keeps the prior status visible in the case history.
 
 **Related:** NFR-002, NFR-004, NFR-014, NFR-015, NFR-016, NFR-024
 
-### REQ-F-004 · approved · source: requirements:feature:Scoring & evidence engine
+### REQ-013 · approved · source: requirements:feature:Scoring & evidence engine
 
-The engine scores each patient strictly on data before their evaluation cutoff, evaluates ASAS referral criteria and SPARTAN points, applies counter-evidence caps that name an alternative, and outputs a tier rather than a number. It also covers offline training and threshold tuning, live scoring from a stored artefact, free-text clue extraction and cited text generation.
+The engine builds each patient's input set strictly from pre-cutoff events, evaluates referral criteria and points, applies counter-evidence caps and outputs a status of High, Moderate, Low or Insufficient history — never a bare score. An offline job trains a model and tunes a threshold on separate splits, and live scoring applies the stored artefact with the rules layer applied afterwards. A free-text extractor and a cited text generator supply the clinician and patient narratives.
 
 Requirements in this group:
-- Score only before the cutoff: input set built from events dated before the patient's evaluation cutoff only; undated family-history rows always allowed. For a confirmed case whose cutoff sits before diagnosis, neither the diagnosis nor its workup appears in the evidence, criteria or timeline shown with the case.
-- Evaluate referral criteria and points: each referral criterion and points item listed as met, not met, or unknown from available data, with the points total shown against the referral threshold held in the pack. Opening a met criterion names the underlying event or intake answer with date and source tag; an unknown item states what would be needed to answer it rather than counting silently as not met.
+
+- Score only before the cutoff: the input set is built from events dated before that patient's evaluation cutoff date only, with undated family-history rows always allowed. For a confirmed case whose cutoff sits before diagnosis, neither the diagnosis nor its workup appears in the evidence, criteria or timeline shown with the case.
+- Evaluate referral criteria and points: each referral criterion and points item is listed as met, not met, or unknown from available data, with the points total shown against the referral threshold held in the condition pack. Opening a met criterion names the underlying event or intake answer with its date and source tag; an unknown item states what would be needed to answer it rather than counting silently as not met.
 - Counter-evidence caps the status: pack rules — e.g. iliac-side-only sclerosis without erosions with postpartum timing; widespread pain with normal inflammatory markers and poor anti-inflammatory response; load-related changes in athletes — cap the status and name the plausible alternative explanation. Each rule that fired is shown in plain language with the triggering evidence linked to its source record.
-- Status output, never a bare score: outputs High, Moderate, Low or Insufficient history as the headline status, with no bare probability or raw score in its place. A patient whose reachable history falls below the configured threshold is set to Insufficient history; changing that threshold changes the affected set on rescoring without a code change.
-- Offline training and threshold tuning: a backend job builds features from leakage-safe pre-cutoff inputs, fits the model on the training split alone, tunes the operating threshold on the validation split, and evaluates the test split once per run, logging any repeat rather than overwriting the first result. Stores the model artefact, the chosen threshold with its selection objective, and a run record holding dataset version, seed and feature list.
-- Live scoring from the stored model: applies the stored artefact and threshold to pre-cutoff features with no training in the request, then applies the rules layer's counter-evidence caps afterwards so a capped status can never be raised back to High. Clinician decisions and recorded outcomes are stored as data and change neither the model nor the threshold.
-- Extract clues from free text: an extractor reads notes and imaging reports and returns structured findings for the pack's target clues, each with the exact quoted sentence and the reference back to the note, returning nothing rather than inventing a finding. An extraction report shows notes processed and findings per clue type.
-- Generate cited clinician and patient text: clinician case summary and patient visit-prep text written from the assembled evidence set, every factual sentence carrying a citation that resolves to a specific source record with its date and source tag. Patient text is plain language citing the patient's own records and answers, with no status, no score and no named likely diagnosis.
+- Status output, never a bare score: outputs High, Moderate, Low or Insufficient history as the headline status, with no bare probability or raw score in its place. A patient whose reachable history falls below the pack-configured threshold is set to Insufficient history; changing that threshold changes the affected set on rescoring without a code change.
+- Offline training and threshold tuning: a backend job builds features from leakage-safe pre-cutoff inputs, fits the model on the training split alone, tunes the operating threshold on the validation split and evaluates the test split once per run, logging any repeat rather than overwriting the first result. It stores the model artefact, the chosen threshold with its selection objective, and a run record holding dataset version, seed and feature list.
+- Live scoring from the stored model: scoring during a session applies the stored model artefact and threshold to the patient's pre-cutoff features with no training in the request, then applies the rules layer's counter-evidence caps afterwards so a capped status can never be raised back to High. Clinician decisions and recorded outcomes are stored as data and change neither the model nor the threshold.
+- Extract clues from free text: an extractor reads notes and imaging reports and returns structured findings for the pack's target clues, each with the exact quoted sentence and the reference back to the note, returning nothing rather than inventing a finding when no target clue is present. An extraction report shows notes processed and findings per clue type.
+- Generate cited clinician and patient text: the clinician case summary and the patient visit-prep text are written from the assembled evidence set, with every factual sentence carrying a citation resolving to a specific source record with its date and source tag. The patient text is plain language citing the patient's own records and answers, and contains no status, no score and no named likely diagnosis.
 
-CONFLICT RECORDED: see REQ-003 — the scope capability list says rules-only scoring with no model trained in the app, while these functional requirements specify in-system training and live scoring from a stored artefact.
+Conflict recorded, not resolved: the scope list states "Rules-only scoring in the product; no model trained in the app" and an "optional per-patient model score column shown when the dataset supplies one", while this feature group specifies an offline training job plus live scoring from a stored model artefact. Both statements are carried as given; NFR-022 covers the rules-only fallback when no artefact is available.
 
-**Related:** NFR-013, NFR-014, NFR-020, NFR-022, NFR-029, REQ-003
+**Related:** REQ-003, NFR-013, NFR-014, NFR-019, NFR-020, NFR-022, NFR-029
 
-### REQ-F-005 · approved · source: requirements:feature:Safety guardrails
+### REQ-014 · approved · source: requirements:feature:Safety guardrails
 
-Four guardrails are implemented as automated checks that can fail the build rather than as written policy. They block post-cutoff data, unresolvable citations, prohibited patient-facing wording, and missing synthetic-data notices.
+Four enforced guardrails back the product's safety claims: post-cutoff data is blocked everywhere, every generated sentence is verified against a resolvable citation, patient-facing wording is scanned for prohibited terms, and a synthetic-data notice appears on every screen and export page. Each guardrail is covered by an automated suite that fails the build on any violation.
 
 Requirements in this group:
-- Block post-cutoff data everywhere: an enforced rule keeps data dated on or after a patient's cutoff out of scoring inputs and out of every timeline, case summary, export and evaluation view; undated family-history rows are the only exception. An automated suite reports the count across the loaded cohort and fails the build if it is not zero.
+
+- Block post-cutoff data everywhere: an enforced rule keeps data dated on or after a patient's cutoff out of scoring inputs and out of every timeline, case summary, export and evaluation view, with undated family-history rows the only exception. An automated suite reports the count across the loaded cohort and fails the build if it is not zero.
 - Verify every generated sentence: a verifier checks each factual sentence in generated clinician and patient text against a linked source record and blocks or visibly flags any sentence whose citation does not resolve. A citation pointing at a record that does not exist, or that belongs to another patient, is treated the same as a missing one.
 - Check patient-facing wording: an automated check scans every patient-facing screen, generated text, notification and export for a status, a numeric risk value or a condition name from the active pack's prohibited-term list. A violation fails the build and names the offending string and its location.
-- Synthetic-data notice on every screen: every screen in the patient app, the clinician app, the demo replay and the evaluation report shows a visible notice stating the data is wholly synthetic and not for clinical use, and the same notice appears on every page of any printable or exported document. An automated suite visits every route and fails the build if the notice is missing anywhere.
+- Synthetic-data notice on every screen: every screen in the patient app, the clinician app, the demo replay and the evaluation report shows a visible notice stating the data is wholly synthetic and not for clinical use; the same notice appears on every page of any printable or exported document. An automated suite visits every route and fails the build if the notice is missing anywhere.
 
-**Related:** NFR-012, NFR-013, NFR-014, NFR-017
+**Related:** NFR-012, NFR-013, NFR-014, NFR-015, NFR-017
 
-### REQ-F-006 · approved · source: requirements:feature:Demo mode
+### REQ-015 · approved · source: requirements:feature:Demo mode
 
-Demo mode provides a scripted path over six hero personas: a picker, an odyssey replay that states lead time against the simulated diagnosis date, and an automated acceptance suite covering all six personas.
+Demo mode presents six hero personas through a picker, an odyssey replay that contrasts the real journey against when the engine would first have flagged, and an automated acceptance suite asserting the expected outcome for each persona. All patient-side guardrails and the synthetic-data notice apply exactly as outside demo mode.
 
 Requirements in this group:
-- Hero persona picker: the presenter sees the six hero personas with name and a one-line description of the journey each illustrates, then chooses the patient view or the clinician view. That persona's timeline, intake answers and case load as of their cutoff date, with the synthetic-data notice and the patient-side guardrails applying exactly as outside demo mode.
-- Odyssey replay with lead time: shows the real journey of visits and providers on one track and the point at which the engine would first have reached High or Moderate on the other; states the lead time against the simulated diagnosis date and lists the facts nobody connected, with their sources. For a persona at Insufficient history it shows the point at which the product would have said so and what was missing, rather than a flag that never occurred.
-- Automated persona acceptance suite: the six personas' pass tests run automatically — the strong-signals case reaches High at least two years before the simulated diagnosis date; the weak and atypical case reaches Moderate or higher with its conflicting labels named; the two look-alike cases stay below High with counter-evidence and a named alternative; the side-door case is flagged with the eye history and intake-reported self-paid care cited; the sparse-history case shows Insufficient history with a 'what we still need' list and no Low status anywhere.
 
-**Related:** NFR-001, NFR-017
+- Hero persona picker: a presenter opens the picker and sees the six hero personas with their name and a one-line description of the journey each illustrates, then chooses the patient view or the clinician view. That persona's timeline, intake answers and case load as of their cutoff date, with the synthetic-data notice and the patient-side guardrails applying exactly as outside demo mode.
+- Odyssey replay with lead time: the replay shows the real journey of visits and providers on one track and the point at which the engine would first have reached High or Moderate on the other, states the lead time against the simulated diagnosis date, and lists the facts nobody connected with their sources. For a persona at Insufficient history it shows the point at which the product would have said so and what was missing, rather than a flag that never occurred.
+- Automated persona acceptance suite: the six personas' pass tests run automatically —
+  * the strong-signals case reaches High at least two years before the simulated diagnosis date;
+  * the weak and atypical case reaches Moderate or higher with its conflicting labels named;
+  * the two look-alike cases stay below High with counter-evidence and a named alternative;
+  * the side-door case is flagged with the eye history and intake-reported self-paid care cited;
+  * the sparse-history case shows Insufficient history with a "what we still need" list and no Low status anywhere.
 
-### REQ-F-007 · approved · source: requirements:feature:Evaluation report
+**Related:** NFR-001, NFR-015, NFR-017
 
-An in-app evaluation report runs the engine over a selected split and computes the product's success metrics inside the application. Each metric is shown next to its target with a pass or fail marker, alongside the run's provenance.
+### REQ-016 · approved · source: requirements:feature:Evaluation report
+
+An in-app evaluation report runs over a selected split and computes lead time, per-archetype sensitivity, false-High rates per look-alike group, prevalence-reweighted predictive value and the share of thin-data patients shown as Insufficient history. Each metric is displayed next to its target with a pass or fail marker, alongside the split, dataset version, thresholds in force and run date.
 
 Requirement in this group:
-- In-app evaluation report: running the report over a selected split computes median lead time at the operating threshold, sensitivity per archetype, false-High rate reported separately for each look-alike group, predictive value re-weighted to the lower real-world prevalence, and the share of thin-data patients shown as Insufficient history. Each metric is displayed next to its target with a pass or fail marker, and the split, dataset version, thresholds in force and run date are stated on the page.
 
-**Related:** NFR-012, NFR-017, NFR-028
+- In-app evaluation report: running the report over a selected split computes
+  * median lead time at the operating threshold,
+  * sensitivity per archetype,
+  * false-High rate reported separately for each look-alike group,
+  * predictive value re-weighted to the lower real-world prevalence,
+  * the share of thin-data patients shown as Insufficient history.
+  Each metric is displayed next to its target with a pass or fail marker. The split, dataset version, thresholds in force and run date are stated on the page.
 
-### REQ-F-008 · approved · source: requirements:feature:Admin setup & settings
+Related constraints: the report is the only component allowed to read ground truth (see REQ-017); access is refused to anyone without the clinician or administrator role (NFR-012); the report must state the caveat that results flatter real-world performance and are not a clinical-accuracy claim (NFR-028); the full-cohort run executes as a background job with progress shown (NFR-006).
 
-Administrator capabilities cover a single-run dataset ingest with a per-file report, provenance on every stored fact, an evaluation-only ground-truth store, encounter de-duplication checking, condition pack configuration with editable code lists, and a system settings/status page.
+**Related:** NFR-012, NFR-028, REQ-017
+
+### REQ-017 · approved · source: requirements:feature:Admin setup & settings
+
+Administrators run a single repeatable ingest of the supplied dataset files with a per-file pass/fail report, and the loaded store keeps full provenance on every fact. Ground truth is held in a separate evaluation-only store the scoring engine cannot read. Encounter de-duplication is checked against the supplied truth file, all condition logic lives as editable pack configuration, and a settings page reports environment, health and the active dataset version with credentials masked.
 
 Requirements in this group:
-- One-run dataset ingest and report: an administrator starts a single ingest run loading the supplied patient, label, event, note, intake, coverage, encounter-truth, persona and bulk FHIR files, reporting per-file rows loaded and rejected. The report shows dataset version, seed, total patient count and a pass/fail line per file, names any failed file with its reason and column, and re-running ingest replaces the prior load rather than duplicating patients or events.
+
+- One-run dataset ingest and report: an administrator starts a single ingest run that loads the supplied patient, label, event, note, intake, coverage, encounter-truth, persona and bulk FHIR files, reporting per-file rows loaded and rejected. The report shows the dataset version, the seed, the total patient count and a pass or fail line per file, and names any failed file with its reason and column. Re-running ingest replaces the prior load rather than duplicating patients or events.
 - Provenance on every stored fact: each stored event keeps its source fields — patient, event time and type, code system and code, value, provider organisation and specialty, source type of record/claim/patient, source reference, encounter reference and confidence — so any item shown anywhere can be traced back. A row missing its source type or source reference is reported as a provenance failure and is not made available to scoring or display.
-- Evaluation-only ground-truth store: ground-truth label columns held in a separate evaluation-only store the scoring engine cannot read, with only the evaluation cutoff date and split assignment permitted for operational use. The evaluation report is the only component allowed to read ground truth.
+- Evaluation-only ground-truth store: ground-truth label columns are held in a separate evaluation-only store that the scoring engine cannot read, with only the evaluation cutoff date and split assignment permitted for operational use. The evaluation report is the only component allowed to read ground truth.
 - Encounter de-duplication and check: record and claim rows describing the same real encounter are merged into one timeline entry tagged with both contributing sources and counted once in any visit-count signal. A check against the supplied encounter truth file reports how many true encounters matched one merged entry, how many were split, how many rows were merged in error, and how many were invisible in every source and so never shown.
 - Condition pack configuration: all condition-specific logic lives in the pack as configuration data — code lists, signal definitions, referral criteria and points, counter-evidence and demotion rules, status thresholds, workup items with their reasoning text, and patient-facing copy strings. With the pack disabled the application still starts and reports that no condition pack is active.
-- Editable code lists: an administrator can view and edit the diagnosis, service, laboratory, local marker and drug code lists in the pack, each shown with the signal it maps to; saving applies the change at the next rescore without a deployment, recording who changed it and when. Equivalent codes created by code drift are recognised as the same signal so counts stay continuous across the change date, and any item awaiting clinical sign-off is marked as such without blocking scoring.
-- System settings and deployment status: the administrator page reports the running environment, the health check result and the active dataset version. Credentials such as the hosted language-model key are supplied as deployment configuration and shown only as a masked placeholder with a connection status of connected or not configured.
+- Editable code lists: an administrator can view and edit the diagnosis, service, laboratory, local marker and drug code lists in the pack, each shown with the signal it maps to. Saving applies the change at the next rescore without a deployment, recording who changed it and when. Equivalent codes created by code drift are recognised as the same signal so counts stay continuous across the change date, and any item awaiting clinical sign-off is marked as such without blocking scoring.
+- System settings and deployment status: the administrator page reports the running environment, the health check result and the active dataset version. Credentials such as the hosted language-model key are supplied as deployment configuration and shown only as a masked placeholder (e.g. <llm-api-key>) with a connection status of connected or not configured.
 
 **Related:** NFR-005, NFR-006, NFR-011, NFR-019, NFR-021, NFR-023, NFR-027
 
 ### NFR-001 · approved · source: requirements:NFR-001
 
-Performance: picking a hero persona through to a rendered case summary must complete end to end in under sixty seconds. Repeat opens reuse already-generated summaries. A performance check names the slow stage on failure.
+Performance requirement for the demo path. With the dataset already loaded, picking a hero persona through to a rendered case summary must complete in under sixty seconds end to end. A performance check fails and names the slow stage if any of the six personas exceeds the budget.
 
-Category: performance. Target: under 60 seconds end to end per persona, for all six hero personas.
-- With the dataset already loaded, the whole path — timeline assembly, scoring, evidence assembly, summary rendering — must complete in under sixty seconds measured end to end.
+Category: performance.
+
+- The whole path from picking a hero persona to a rendered case summary — including timeline assembly, scoring, evidence assembly and summary rendering — must complete in under sixty seconds measured end to end, with the dataset already loaded.
 - Already-generated summaries are reused so a repeat open is faster.
 - A performance check fails and names the slow stage if any of the six personas exceeds the budget.
 
-**Related:** REQ-F-006
+Target: under 60 seconds end to end per persona, for all six hero personas.
+
+**Related:** REQ-015, REQ-002
 
 ### NFR-002 · approved · source: requirements:NFR-002
 
-Usability: the one-page case summary must let a clinician state the status, the reason and the suggested next step from the top card alone in under two minutes on a desktop browser.
+Usability requirement for the clinician case summary. The top card alone must let a clinician state the status, the reason and the suggested next step in under two minutes on a desktop browser, with the rest of the case reachable without leaving the page.
 
-Category: usability. Target: first read in under 2 minutes.
-- Status, reason and suggested next step statable from the top card alone.
+Category: usability.
+
+- The one-page case summary must let a clinician state the status, the reason and the suggested next step from the top card alone in under two minutes on a desktop browser.
 - The rest of the case must be reachable without leaving the page.
 
-**Related:** REQ-F-003
+Target: first read in under 2 minutes.
+
+**Related:** REQ-012
 
 ### NFR-003 · approved · source: requirements:NFR-003
 
-Usability: a first-time respondent must be able to finish the one-question-per-screen symptom intake in about ten minutes or less.
+Usability requirement for the symptom intake. A first-time respondent must be able to complete the one-question-per-screen intake in about ten minutes or less, with progress shown and answers preserved for resume.
 
-Category: usability. Target: about 10 minutes or less for a first-time respondent.
-- Progress shown as a position in the set.
-- Answers preserved so the respondent can leave and resume.
+Category: usability.
 
-**Related:** REQ-F-002
+- A first-time respondent must be able to complete the one-question-per-screen symptom intake in about ten minutes or less.
+- Progress is shown as a position in the set.
+- Answers are preserved so the respondent can leave and resume.
+
+Target: about 10 minutes or less for a first-time respondent.
+
+**Related:** REQ-011
 
 ### NFR-004 · approved · source: requirements:NFR-004
 
-Usability: one web application serves both sides. Patient screens render on a phone-sized window without horizontal scrolling and are usable one-handed; clinician worklist and case summary fit one desktop page.
+Responsiveness requirement for the single web app. Patient screens must render on a phone-sized browser window without horizontal scrolling and be usable one-handed; clinician worklist and case summary must present the case on one desktop page without nested scrolling panes. Both must match the agreed designs.
 
 Category: usability.
-- Patient screens: phone-sized browser window, no horizontal scrolling, usable with one thumb.
-- Clinician screens: worklist and case summary present the case on one desktop page without nested scrolling panes.
+
+- The same web application serves both sides.
+- Patient screens render on a phone-sized browser window without horizontal scrolling and are usable with one thumb.
+- The clinician worklist and case summary present the case on one desktop page without nested scrolling panes.
 - Both must match the agreed designs.
 
-**Related:** REQ-F-002, REQ-F-003
+**Related:** REQ-001, REQ-011, REQ-012
 
 ### NFR-005 · approved · source: requirements:NFR-005
 
-Scalability: the loaded store must hold and index the full supplied dataset by patient and event time so persona and case views are served from the database, not by parsing raw files per request.
+Scalability requirement for the loaded store. It must hold and index the full supplied dataset by patient and event time so persona and case views are served from the database rather than by parsing raw files on each request.
 
-Category: scalability. Target: ~5,006 patients, ~572k events, ~167k encounter-truth rows, ~40k notes.
-- Also holds intake and coverage rows and the bulk FHIR resources.
-- Indexed by patient and event time.
-- Views served from the loaded database rather than by parsing raw files on each request.
+Category: scalability.
 
-**Related:** REQ-F-008, REQ-001
+- The loaded store must hold and index the supplied dataset: roughly 5,000 patients, about 572,000 event rows, 167,000 encounter-truth rows, 40,000 notes, intake and coverage rows, and the bulk FHIR resources.
+- Indexing is by patient and event time.
+- Persona and case views must be served from the loaded database, not by parsing the raw files on each request.
+
+Target: ~5,006 patients, ~572k events, ~167k encounter-truth rows, ~40k notes.
+
+**Related:** REQ-001, REQ-017
 
 ### NFR-006 · approved · source: requirements:NFR-006
 
-Scalability: work that takes minutes rather than seconds must run as background jobs with progress shown, so no screen is blocked.
+Long-running work must run as background jobs with visible progress so no screen is blocked. This covers dataset ingest, the encounter de-duplication check, the clue extractor over 40,000 notes, model training and the full-cohort evaluation run.
 
-Category: scalability. Applies to: dataset ingest, the encounter de-duplication check, running the clue extractor over the 40,000 notes, model training, and the full-cohort evaluation run.
+Category: scalability.
 
-**Related:** REQ-002, REQ-F-008
+- Work that takes minutes rather than seconds must run as background jobs with progress shown, so no screen is blocked while they run.
+- Named workloads: the dataset ingest; the encounter de-duplication check; running the clue extractor over the 40,000 notes; model training; the full-cohort evaluation run.
+- Supported by the approved Redis queue service (see REQ-002).
+
+**Related:** REQ-002, REQ-013, REQ-016, REQ-017
 
 ### NFR-007 · approved · source: requirements:NFR-007
 
-Security: sessions must end immediately on sign-out, expire after a configured idle period, and stop working for any deactivated account.
+Session lifecycle requirement. Sessions must end immediately on sign-out, expire after a configured idle period, and stop working for any deactivated account, with no new sign-in succeeding for that account.
 
 Category: security.
-- Sign-out ends a clinician or patient session immediately.
-- After a configured idle period the next action asks the user to sign in again.
-- Deactivation by an administrator stops existing sessions and prevents any new sign-in for that account.
 
-**Related:** REQ-F-001
+- A clinician or patient session must end immediately when the user signs out.
+- A session must expire after a configured idle period, so the next action asks the user to sign in again.
+- A session must stop working for any account an administrator deactivates, after which no new sign-in for that account succeeds.
+
+**Related:** REQ-010
 
 ### NFR-008 · approved · source: requirements:NFR-008
 
-Security: account passwords must be stored only as salted hashes, never in recoverable form. New accounts are created without a usable password.
+Credential storage requirement. Account passwords must be held only as salted hashes and never in recoverable form. New accounts are created without a usable password so the user sets their own at first sign-in.
 
 Category: security.
-- Passwords held only as salted hashes.
-- New accounts are created without a usable password; the user sets their own at first sign-in as <set-at-first-login>.
 
-**Related:** REQ-F-001
+- Account passwords must be held only as salted hashes and never in recoverable form.
+- New accounts are created without a usable password; the user sets their own at first sign-in, recorded as <set-at-first-login>.
+
+**Related:** REQ-010
 
 ### NFR-009 · approved · source: requirements:NFR-009
 
-Security: invite and share links must use unguessable tokens with a configured expiry, be scoped to one patient's data in the intended role, and be revocable with immediate effect.
+Token requirement for invite and share links. Tokens must be unguessable with a configured expiry, scoped to one patient's own data in the intended role only, refused once expired, revoked or consumed, and revocation must take effect immediately.
 
 Category: security.
-- Unguessable tokens with a configured expiry.
-- Grant access only to the one patient's own data and only in the intended role.
-- Refused once expired, revoked or already consumed.
-- A patient revoking a share link stops access immediately.
 
-**Related:** REQ-F-001, REQ-F-002
+- Invite and share links must use unguessable tokens with a configured expiry.
+- They grant access only to the one patient's own data and only in the intended role.
+- They are refused once expired, revoked or already consumed.
+- They stop granting access immediately when the patient revokes a share link.
+
+**Related:** REQ-010, REQ-011
 
 ### NFR-010 · approved · source: requirements:NFR-010
 
-Security: every patient and clinician route refuses unauthenticated requests, and the product offers no public sign-up or self-service entry point.
+Access model requirement. Every patient and clinician route must refuse unauthenticated requests, and the product offers no public sign-up or self-service entry point of any kind — access is only ever granted by invitation.
 
-Category: security. Access is only ever granted by invitation.
+Category: security.
 
-**Related:** REQ-F-001, REQ-003
+- Every patient and clinician route must refuse unauthenticated requests.
+- The product offers no public sign-up or self-service entry point of any kind.
+- Access is only ever granted by invitation.
+
+**Related:** REQ-003, REQ-010
 
 ### NFR-011 · approved · source: requirements:NFR-011
 
-Security: the database connection and the hosted language-model credential are supplied as deployment configuration and must never appear in source control, logs or any screen.
+Credential handling requirement. The database connection and the hosted language-model credential must be supplied as deployment configuration, with no credential value appearing in source control, logs or any screen. The settings page shows only a masked placeholder with a connected or not-configured status.
 
 Category: security.
-- Supplied as deployment configuration, such as <database-connection-string> and <llm-api-key>.
+
+- The database connection and the hosted language-model credential must be supplied as deployment configuration, e.g. <database-connection-string> and <llm-api-key>.
 - No credential value may appear in source control, logs or any screen.
 - The settings page shows only a masked placeholder with a connected or not-configured status.
 
-**Related:** REQ-002, REQ-F-008
+**Related:** REQ-002, REQ-017
 
 ### NFR-012 · approved · source: requirements:NFR-012
 
-Privacy: no status, score, criteria evaluation or suspected-condition name may reach a patient-role account, in any screen or in the data behind it. Role enforcement happens at the server, and an automated check must find zero occurrences.
+Privacy requirement separating patient and clinician data. No status, score, criteria evaluation or suspected-condition name may reach a patient-role account in any screen or in the data behind it, and refusal must happen at the server rather than being hidden in the browser. An automated check over every patient-facing response must find zero occurrences or fail the build.
 
-Category: privacy. Target: zero occurrences in patient-facing responses.
-- Requests from a patient account for clinician screens or clinician data are refused at the server rather than hidden in the browser.
+Category: privacy.
+
+- No status, score, criteria evaluation or suspected-condition name may be returned to a patient-role account in any screen or in the data behind it.
+- Requests from a patient account for clinician screens or clinician data must be refused at the server, not hidden in the browser.
 - The evaluation report is refused to anyone without the clinician or administrator role.
 - An automated check over every patient-facing response must find zero occurrences or fail the build.
 
-**Related:** REQ-F-002, REQ-F-005, REQ-F-007
+Target: zero occurrences in patient-facing responses.
+
+**Related:** REQ-011, REQ-014, REQ-016
 
 ### NFR-013 · approved · source: requirements:NFR-013
 
-Compliance: scoring inputs, training features and anything rendered for a patient must contain no event dated on or after that patient's evaluation cutoff, and no ground-truth label column may be used as an engine input or feature.
+Compliance requirement for leakage safety. Scoring inputs, training features and anything rendered for a patient must contain no event dated on or after that patient's evaluation cutoff, with undated family-history rows the only exception, and no ground-truth label column may be used as an input or feature. Automated checks must report zero violations across the loaded cohort or fail the build.
 
-Category: compliance. Target: zero post-cutoff items and zero ground-truth columns in scoring inputs, features and rendered output.
+Category: compliance.
+
+- Scoring inputs, training features and anything rendered for a patient must contain no event dated on or after that patient's evaluation cutoff.
 - Undated family-history rows are the only exception.
+- No ground-truth label column may be used as an engine input or feature.
 - Automated checks must report zero violations across the loaded cohort and fail the build otherwise.
 
-**Related:** REQ-F-004, REQ-F-005
+Target: zero post-cutoff items and zero ground-truth columns in scoring inputs, features and rendered output.
+
+**Related:** REQ-013, REQ-014, REQ-017
 
 ### NFR-014 · approved · source: requirements:NFR-014
 
-Compliance: every evidence item on a case and every factual sentence in generated text must resolve to an existing source record belonging to that patient.
+Traceability requirement. Every evidence item on a case and every factual sentence in generated text must resolve to an existing source record belonging to that patient. A cohort-wide automated traceability check must report full resolution and zero published uncited sentences, failing otherwise.
 
-Category: compliance. Target: 100% of evidence items resolving; zero published uncited sentences.
+Category: compliance.
+
+- Every evidence item on a case and every factual sentence in generated text must resolve to an existing source record belonging to that patient.
 - An automated traceability check over the whole cohort must report full resolution and zero published uncited sentences.
 - The check fails if any item or sentence cannot be resolved.
 
-**Related:** REQ-F-003, REQ-F-005
+Target: 100% of evidence items resolving; zero published uncited sentences.
+
+**Related:** REQ-012, REQ-013, REQ-014, REQ-017
 
 ### NFR-015 · approved · source: requirements:NFR-015
 
-Compliance: a patient below the reachable-history threshold must be shown as Insufficient history everywhere on the clinician side, visually distinct from Low, and never as Low or with reassuring or numeric wording.
+Safety requirement that thin data never reads as reassurance. A patient below the reachable-history threshold must show as Insufficient history on every clinician screen, worklist row and export, visually distinct from Low, and must never be labelled Low or given reassuring wording or a numeric risk value. An automated guardrail test fails the build on any occurrence.
 
-Category: compliance. Target: 100% of thin-data patients shown as Insufficient history, zero Low occurrences.
-- Applies to every clinician screen, worklist row and export.
+Category: compliance.
+
+- A patient below the reachable-history threshold must be shown as Insufficient history on every clinician screen, worklist row and export.
+- The Insufficient history state must be visually distinct from Low.
+- The word Low, reassuring wording or a numeric risk value must never appear as that patient's status.
 - An automated guardrail test checks this and fails the build on any occurrence.
 
-**Related:** REQ-F-003, REQ-F-004
+Target: 100% of thin-data patients shown as Insufficient history, zero Low occurrences.
+
+**Related:** REQ-012, REQ-013, REQ-015
 
 ### NFR-016 · approved · source: requirements:NFR-016
 
-Compliance: the product must never issue a diagnosis or a treatment decision. The suggested workup is advisory text only, and the patient side only organises the patient's own data and prompts questions.
+Regulatory posture requirement: the product is non-device decision support. It must never issue a diagnosis or treatment decision; suggested workup is advisory text only with no order, prescription, appointment or bill raised from it, and the patient side only organises the patient's own data and prompts questions.
 
 Category: compliance.
-- No order, prescription, appointment or bill may be raised from the suggested workup.
-- The patient side never names a likely disease and never shows a status or score.
 
-**Related:** REQ-F-002, REQ-F-003
+- The product must never issue a diagnosis or a treatment decision.
+- The suggested workup is advisory text only, with no order, prescription, appointment or bill raised from it.
+- The patient side only organises the patient's own data and prompts questions; it never names a likely disease and never shows a status or score.
+
+Note: this is a design posture for a human to confirm, not legal advice.
+
+**Related:** REQ-011, REQ-012, REQ-003
 
 ### NFR-017 · approved · source: requirements:NFR-017
 
-Compliance: a visible notice stating the data is wholly synthetic and not for clinical use must appear on every route and on every page of every exported document.
+A visible synthetic-data notice must appear on every route in the patient app, clinician app, demo replay and evaluation report, and on every page of every printable or exported document. The guardrail suite reports notice presence across all routes and a missing banner fails the build.
 
-Category: compliance. Target: present on 100% of routes and on every page of every export.
-- Applies to the patient app, clinician app, demo replay and evaluation report.
+Category: compliance.
+
+- A visible notice stating that the data is wholly synthetic and not for clinical use must appear on every route in the patient app, the clinician app, the demo replay and the evaluation report.
+- The same notice must appear on every page of every printable or exported document.
 - The guardrail suite reports the notice present on all routes; a missing banner fails the build.
 
-**Related:** REQ-F-005
+Target: present on 100% of routes and on every page of every export.
+
+**Related:** REQ-014, REQ-015, REQ-016
 
 ### NFR-018 · approved · source: requirements:NFR-018
 
-Compliance: there must be no payment, pricing, billing or subscription step anywhere in the product.
+No commercial flow anywhere in the product. There must be no payment, pricing, billing or subscription step, since this is an invitation-only internal proof of concept.
 
-Category: compliance. Rationale given: this is an invitation-only internal proof of concept.
+Category: compliance.
+
+- There must be no payment, pricing, billing or subscription step anywhere in the product.
+- Rationale as stated: this is an invitation-only internal proof of concept.
 
 **Related:** REQ-003
 
 ### NFR-019 · approved · source: requirements:NFR-019
 
-Maintainability: no condition-specific identifier may be hard-coded outside the condition pack, proven by an automated scan. Pack changes take effect on rescoring without a code deployment.
+Maintainability requirement confining condition logic to the pack. No condition-specific identifier may be hard-coded outside the pack, proven by an automated code scan, and changes to code lists, thresholds or wording take effect on rescoring without a deployment. With the pack disabled the application must still start cleanly and report that no pack is active.
 
 Category: maintainability.
-- No condition code, marker name or named rule hard-coded outside the pack; proven by an automated scan of the application code.
+
+- No condition-specific identifier — a condition code, a marker name or a named rule — may be hard-coded outside the condition pack.
+- This is proven by an automated scan of the application code.
 - Changes to code lists, thresholds or wording take effect on rescoring without a code deployment.
 - With the pack disabled the application still starts cleanly and reports that no pack is active.
 
-**Related:** REQ-F-008
+**Related:** REQ-013, REQ-017
 
 ### NFR-020 · approved · source: requirements:NFR-020
 
-Maintainability: each training run must persist its model artefact, the chosen operating threshold with its selection objective, and a run record, with the test split evaluated and recorded once per run.
+Reproducibility requirement for training runs. Each run must persist its model artefact, the chosen operating threshold with its selection objective, and a run record holding dataset version, seed and feature list. The test split is evaluated and recorded once per run, with any repeat logged rather than silently overwriting the first result.
 
 Category: maintainability.
-- Run record holds the dataset version, seed and feature list.
-- Any repeat test evaluation is logged rather than silently overwriting the first result.
 
-**Related:** REQ-F-004
+- Each training run must persist: the model artefact; the chosen operating threshold with its selection objective; a run record holding the dataset version, seed and feature list.
+- The test split is evaluated and recorded once per run.
+- Any repeat is logged rather than silently overwriting the first result.
+
+**Related:** REQ-013
 
 ### NFR-021 · approved · source: requirements:NFR-021
 
-Maintainability: re-running ingest on the same dataset must replace the prior load rather than duplicate rows, and a malformed file must leave no partially loaded rows queryable.
+Ingest must be repeatable and atomic in effect. Re-running on the same dataset replaces the prior load rather than duplicating patients or event rows, with the final patient count matching the file. A malformed file or missing required column must leave no partially loaded rows queryable and must be named with its reason.
 
 Category: maintainability.
-- Final patient count must match the file.
-- A malformed file or missing required column leaves no partially loaded rows queryable by the application and must be named with its reason instead of silently skipped.
 
-**Related:** REQ-F-008
+- Re-running ingest on the same dataset must replace the prior load rather than create duplicate patients or event rows, with the final patient count matching the file.
+- A malformed file or a missing required column must leave no partially loaded rows queryable by the application.
+- Such a file must be named with its reason instead of being silently skipped.
+
+**Related:** REQ-017
 
 ### NFR-022 · approved · source: requirements:NFR-022
 
-Availability: cases must still render when the model artefact or the language service is unavailable, falling back to rules-only tiering and a structured-only case respectively.
+Availability requirement for degraded dependencies. With no model artefact available the system falls back to rules-only tiering and labels the case as scored without the model; if the language-model credential is missing or the call fails, the case still renders status, evidence and criteria from the structured engine with the narrative section stating that generated text is unavailable.
 
 Category: availability.
-- No model artefact available: fall back to rules-only tiering and label the case as scored without the model.
-- Language-model credential missing or the call fails: the case still renders its status, evidence items and criteria from the structured engine, with the narrative section stating that generated text is unavailable.
+
+- If no model artefact is available, the system must fall back to rules-only tiering and label the case as scored without the model.
+- If the language-model credential is missing or the call fails, the case must still render its status, evidence items and criteria from the structured engine, with the narrative section stating that generated text is unavailable.
 - Neither situation may fail the page or show an empty status.
 
-**Related:** REQ-F-004, REQ-002
+**Related:** REQ-013, REQ-002
 
 ### NFR-023 · approved · source: requirements:NFR-023
 
-Compatibility: ingest must read the dataset exactly as supplied, with no manual conversion first.
+Compatibility requirement for ingest. The dataset must be read exactly as supplied — comma-separated files, JSON and gzipped bulk FHIR newline-delimited JSON for every resource type present — without any manual conversion first.
 
-Category: compatibility. Formats: comma-separated files, JSON, and gzipped bulk FHIR newline-delimited JSON for every resource type present.
+Category: compatibility.
 
-**Related:** REQ-F-008
+- Ingest must read the dataset exactly as supplied: comma-separated files, JSON, and gzipped bulk FHIR newline-delimited JSON for every resource type present.
+- No file may need to be converted by hand before ingest.
+
+**Related:** REQ-017, REQ-001
 
 ### NFR-024 · approved · source: requirements:NFR-024
 
-Compatibility: the referral packet and the visit-prep sheet must be self-contained printable documents readable without the application or an account.
+Exports must be self-contained. The referral packet and the visit-prep sheet must be readable by a rheumatologist or patient without access to the application or an account.
 
-Category: compatibility. Readers named: a rheumatologist (referral packet) and the patient (visit-prep sheet).
+Category: compatibility.
 
-**Related:** REQ-F-002, REQ-F-003
+- The referral packet and the visit-prep sheet must be self-contained printable documents.
+- They must be readable without access to the application or an account.
+- Note: every page of these exports also carries the synthetic-data notice (NFR-017).
+
+**Related:** REQ-011, REQ-012
 
 ### NFR-025 · approved · source: requirements:NFR-025
 
-Compliance, accepted risk: formal security certification and any regulatory submission are deliberately out of this release.
+Accepted risk: formal security certification and any regulatory submission are deliberately out of this release. The team accepts shipping the invitation-only internal proof of concept without them, on the condition that the design does not block that work later.
 
-Category: compliance (accepted risk).
-- The product is an invitation-only internal proof of concept.
-- The team accepts that it ships without certification or submission, on the condition that the design does not block that work later.
+Category: compliance. Marked in the input as an accepted risk.
 
-**Related:** REQ-003
+- Formal security certification and any regulatory submission are deliberately out of this release.
+- The product is an invitation-only internal proof of concept and the team accepts that it ships without them.
+- Condition of acceptance: the design must not block that work later (see the AWS rationale in REQ-001 regarding the HIPAA-eligible configuration and SOC 2 path).
+
+**Related:** REQ-003, REQ-001
 
 ### NFR-026 · approved · source: requirements:NFR-026
 
-Privacy, accepted risk: the proof of concept runs entirely on synthetic data, so the handling controls real patient data would require are knowingly not built in this release.
+Accepted risk: the proof of concept runs entirely on synthetic data, with no real patient information, no live record or insurer connections and no ethics review. The handling controls that real patient data would require are knowingly not built in this release.
 
-Category: privacy (accepted risk). Stated conditions: no real patient information, no live record or insurer connections, and no ethics review.
+Category: privacy. Marked in the input as an accepted risk.
 
-**Related:** REQ-003
+- The proof of concept runs entirely on synthetic data, with no real patient information.
+- There are no live record or insurer connections and no ethics review.
+- The handling controls that real patient data would require are knowingly not built in this release.
+
+**Related:** REQ-003, NFR-017
 
 ### NFR-027 · approved · source: requirements:NFR-027
 
-Compliance, accepted risk: code lists, rule thresholds, counter-evidence rules and patient-facing wording ship without clinical review.
+Accepted risk: code lists, rule thresholds, counter-evidence rules and patient-facing wording ship without clinical review. They are marked in the pack as awaiting clinical sign-off, and that marker is informational only — it does not block scoring or the demo.
 
-Category: compliance (accepted risk).
-- Items are marked in the pack as awaiting clinical sign-off.
+Category: compliance. Marked in the input as an accepted risk.
+
+- Code lists, rule thresholds, counter-evidence rules and patient-facing wording ship without clinical review.
+- They are marked in the condition pack as awaiting clinical sign-off.
 - The marker is informational only and does not block scoring or the demo.
 
-**Related:** REQ-F-008, REQ-F-004
+**Related:** REQ-017, REQ-013
 
 ### NFR-028 · approved · source: requirements:NFR-028
 
-Compliance, accepted risk: results will flatter real-world performance because the notes are template sentences and the cohort is simpler and more enriched than real practice. Reports must state this caveat.
+Accepted risk: because the dataset's notes are template sentences and the cohort is simpler and more enriched than real practice, extraction and metric results will look better here than on real clinical data. The extraction report and the evaluation report must state this caveat and that the numbers prove the pipeline works rather than making a clinical-accuracy claim.
 
-Category: compliance (accepted risk).
-- The extraction report and the evaluation report must state the caveat.
-- They must state that the numbers prove the pipeline works rather than making a clinical-accuracy claim.
+Category: compliance. Marked in the input as an accepted risk.
 
-**Related:** REQ-F-007, REQ-F-004
+- The dataset's notes are template sentences and the cohort is simpler and more enriched than real practice.
+- Extraction and metric results will therefore look better here than on real clinical data.
+- Both the extraction report and the evaluation report must state this caveat, and must state that the numbers prove the pipeline works rather than making a clinical-accuracy claim.
+
+**Related:** REQ-016, REQ-013
 
 ### NFR-029 · approved · source: requirements:NFR-029
 
-Maintainability, accepted risk: clinician decisions and recorded workup outcomes are stored and displayed as data only and feed no learning loop in this build.
+Accepted risk: clinician decisions and recorded workup outcomes are stored and displayed as data only. In this build they trigger no retraining and no threshold change, and are not used as training data.
 
-Category: maintainability (accepted risk). The team accepts that they trigger no retraining and no threshold change, and are not used as training data.
+Category: maintainability. Marked in the input as an accepted risk.
 
-**Related:** REQ-F-003, REQ-F-004
+- Clinician decisions and recorded workup outcomes are stored and displayed as data only.
+- The team accepts that in this build they trigger no retraining and no threshold change.
+- They are not used as training data.
+
+**Related:** REQ-012, REQ-013
 
 ### NFR-030 · approved · source: requirements:NFR-030
 
-Security, accepted risk: sign-in is deliberately limited to email and password with two roles.
+Accepted risk: sign-in is deliberately limited to email and password with two roles. Single sign-on, health-record launch and any federated identity are knowingly left out of this proof of concept.
 
-Category: security (accepted risk). Single sign-on, health-record launch and any federated identity are knowingly left out of this proof of concept.
+Category: security. Marked in the input as an accepted risk.
 
-**Related:** REQ-F-001
+- Sign-in is deliberately limited to email and password, with two roles.
+- Single sign-on, health-record launch and any federated identity are knowingly left out of this proof of concept.
+
+**Related:** REQ-010
 <!-- sdlc:auto:end narrative -->
 
 <!-- sdlc:auto:start summary -->
-**Requirements version:** v1  
+**Requirements version:** v2  
 **Delivery scope:** lightweight  
-**Approved:** 2026-11-13
+**Approved:** 2026-11-24
 
 **Capabilities in scope:** Admin ingest of the supplied CSV, JSON and FHIR NDJSON dataset files, Unified timeline tagged Record / Insurance claim / You told us, Visible gaps where care was self-paid, unconnected or pre-coverage, Pluggable axSpA condition pack: codes, signals, criteria, workup, copy, ASAS referral criteria and SPARTAN points evaluation, Counter-evidence rules that cap the tier and name the alternative, Leakage-safe scoring as of each patient's evaluation cutoff date, Tier output: High / Moderate / Low / Insufficient history, never a score, One-page clinician case summary readable in under two minutes, Top evidence items linked to the source record behind each, Evidence against, and conflicting labels already in the record, Criteria met and criteria missing, shown side by side, One-click drill from the case summary into the full timeline, Suggested workup with the reasoning for each item, Worklist sorted by status with reason and reachable history, Insufficient-history screen with a "what we still need" list, Demo persona picker over the six hero personas, Clinician sign-in, Rules-only scoring in the product; no model trained in the app, Optional per-patient model score column shown when the dataset supplies one, Code lists (ICD-10, CPT, LOINC, HLA-B27, ATC) as editable pack configuration, EHR/claim encounter de-duplication checked against encounter_truth.csv, Insufficient history set by a reachable-history threshold, One responsive web app: patient mobile-first, clinician desktop, No payments or billing; invitation-only internal proof of concept
 
@@ -946,6 +1069,19 @@ Assumptions surfaced here: (a) no SSO, no SMART-on-FHIR and no EHR launch; patie
 | AC-110 | an automated role-split test over every patient-facing response in the product | it runs | it finds zero occurrences of a tier value, a score value or a pack condition name, and fails the build otherwise |
 | AC-111 | the deployed product | any screen or flow is reviewed | there is no payment, pricing, billing or subscription step anywhere, and access is only ever granted by invitation |
 
+### US-045: Remove the sign-in form from the /start entry screen
+
+**Priority:** medium
+
+> As a demo presenter opening the product, I want the /start screen to show only the two demo entry buttons, with no email or password form, so that the entry screen offers one clear way in and does not present a credential form that is not needed there.
+
+| ID | Given | When | Then |
+|---|---|---|---|
+| AC-147 | the /start route is opened in a browser | the page renders | no email field, no password field and no submit control for signing in is present anywhere on the screen |
+| AC-148 | the /start route is open | the page renders | both demo entry buttons are still shown and the synthetic-data notice is still present on the screen |
+| AC-149 | the /start screen with the form removed | the page loads and the user interacts with it | no request is made to POST /api/auth/login from this screen and no credential input state remains in the SPA for this route |
+| AC-150 | the /start screen opened in a phone-sized browser window and in a desktop window | the page renders after the form is removed | the remaining buttons and notice are laid out without leftover empty space or horizontal scrolling on either size |
+
 ## EPIC-010: The four shipped guardrails
 
 The four non-negotiable guardrails implemented as automated, testable rules rather than written policy: no post-cutoff data reaching scoring or display, no uncited sentence appearing in any generated summary, no risk tier or named likely diagnosis in patient-facing copy, and a synthetic-data banner on every screen. Each runs as a check that can fail the build.
@@ -1051,6 +1187,18 @@ Assumption surfaced here: the six static HTML files in design/ are the visual so
 | AC-133 | the osteitis condensans ilii persona and the fibromyalgia persona | the suite runs | neither reaches High, counter-evidence is listed for both, and the alternative explanation is named |
 | AC-134 | the side-door persona whose back care was cash-paid | the suite runs after their intake is completed | they are flagged and the uveitis history is cited among the top evidence alongside the intake-reported chiropractic care |
 | AC-135 | the sparse-history persona | the suite runs | the status is Insufficient history, no Low tier appears anywhere for them, and a what we still need list is produced |
+
+### US-046: Confirm demo entry and clinician sign-in still work after the form is removed
+
+**Priority:** medium
+
+> As a engineering lead, I want regression coverage over the entry screen, the demo buttons and the existing clinician sign-in route, so that removing the form from /start does not leave a clinician without a way in or break the scripted demo path.
+
+| ID | Given | When | Then |
+|---|---|---|---|
+| AC-151 | the /start screen with the sign-in form removed | each demo entry button is clicked | the clinician view and the patient view open exactly as they did before the change |
+| AC-152 | a clinician with an account and no active session | they sign in on the existing sign-in route | they reach the worklist and their decisions are still attributed to their account |
+| AC-153 | the existing automated test suite and the guardrail route sweep | they are run after the form is removed | all existing tests pass and the synthetic-data banner is still reported present on every route including /start |
 
 ## EPIC-012: In-app evaluation report
 
