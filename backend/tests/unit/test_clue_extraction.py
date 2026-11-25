@@ -152,6 +152,11 @@ def test_ac049_with_no_model_configured_the_packs_wording_still_finds_each_clue(
         "Sclerosis is confined to the iliac side of the joint.",
         "No erosions are identified.",
         "Symptoms began three months postpartum after her second delivery.",
+        "Reports widespread pain across all four quadrants with marked fatigue.",
+        "CRP is normal.",
+        "Anti-inflammatories gave no meaningful relief after a full trial.",
+        "There is oedema in a load-related distribution at the joint margins.",
+        "The pain is worse with activity and loading, and eases with rest.",
     ]
     note = _note(db_session, _patient(db_session), " ".join(sentences))
 

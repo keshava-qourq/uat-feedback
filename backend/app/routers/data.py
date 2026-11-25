@@ -23,6 +23,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dedup import group_rows, merge_items
 from app.engine.inputs import cutoff_date, is_pre_cutoff
+from app.engine.scoring import score_patient, thresholds_in_force
+from app.engine.tiers import worklist_rank
 from app.extraction_report import finding_evidence
 from app.invites import worklist_invite_status
 from app.models import Decision, Event, IntakeAnswer, Note, Patient, Persona, User
@@ -143,24 +145,35 @@ def _timeline_items(db: Session, patient: Patient | None) -> list[dict[str, Any]
     return merge_items(items)
 
 
+def _worklist_row(db: Session, patient: Patient) -> dict[str, Any]:
+    """One worklist row: a tier word and its reason, never a score (AC-037)."""
+    scored = score_patient(db, patient.id)
+    history = scored["reachable_history"]
+    return {
+        "patient_id": patient.id,
+        "display_name": patient.display_name,
+        "dataset_patient_id": patient.dataset_patient_id,
+        # AC-085: none until an invite is issued, then not_yet_opened,
+        # opened once the link is fetched, intake_completed after intake.
+        "invite_status": worklist_invite_status(db, patient.id),
+        "tier": scored["tier"],
+        "tier_reason": scored["tier_reason"],
+        "reachable_history_months": history["months"],
+        "below_reachable_history_threshold": bool(history["below_threshold"]),
+        "counter_evidence_count": len(scored["counter_evidence"]),
+    }
+
+
 @router.get("/api/worklist")
 def worklist(user: Staff, db: Db) -> dict[str, Any]:
-    """Every patient in the loaded cohort, with the notice (no paging)."""
-    return with_notice(
-        {
-            "items": [
-                {
-                    "patient_id": patient.id,
-                    "display_name": patient.display_name,
-                    "dataset_patient_id": patient.dataset_patient_id,
-                    # AC-085: none until an invite is issued, then not_yet_opened,
-                    # opened once the link is fetched, intake_completed after intake.
-                    "invite_status": worklist_invite_status(db, patient.id),
-                }
-                for patient in _patients(db)
-            ]
-        }
-    )
+    """Every patient in the loaded cohort, with the notice (no paging).
+
+    Ordered High, Moderate, Insufficient history, Low through
+    `app.engine.tiers.worklist_rank`, then by display name.
+    """
+    rows = [_worklist_row(db, patient) for patient in _patients(db)]
+    rows.sort(key=lambda row: (worklist_rank(row["tier"]), str(row["display_name"] or "")))
+    return with_notice({"items": rows})
 
 
 class DecisionBody(BaseModel):
@@ -410,6 +423,21 @@ def case_read(patient_id: str, user: Staff, db: Db) -> dict[str, Any]:
     # evidence: each carries its quoted sentence and a link to the full
     # note, resolved through provenance (AC-051).
     body["extracted_evidence"] = finding_evidence(db, patient.id)
+    # The headline the clinician reads: a tier word, the sentence behind it,
+    # the reachable-history state it was judged against and every
+    # counter-evidence item that capped it (US-012-3). No score is served.
+    scored = score_patient(db, patient.id)
+    history = scored["reachable_history"]
+    alternative = scored["alternative_explanation"]
+    body["tier"] = scored["tier"]
+    body["tier_reason"] = scored["tier_reason"]
+    body["reachable_history"] = {
+        "months": history["months"],
+        "threshold_months": history["threshold_months"],
+        "below_threshold": bool(history["below_threshold"]),
+    }
+    body["counter_evidence"] = scored["counter_evidence"]
+    body["alternative_explanation"] = {"label": alternative["label"]} if alternative else None
     return with_notice(body)
 
 
@@ -464,17 +492,36 @@ def latest_evaluation(user: Staff, db: Db) -> dict[str, Any]:
     patient's label."""
     from app.evaluation import latest_report
 
-    return with_notice(latest_report(db))
+    report = latest_report(db)
+    # The thresholds the active pack declares right now, so the report states
+    # the reachable-history threshold in force (AC-040).
+    report["thresholds_in_force"] = thresholds_in_force(db)
+    return with_notice(report)
 
 
 @router.get("/api/cases/{patient_id}/referral-packet.pdf")
 def referral_packet_pdf(patient_id: str, user: Staff, db: Db) -> Response:
     patient = _patient_or_404(db, patient_id)
+    scored = score_patient(db, patient.id)
+    counter = scored["counter_evidence"]
     pages = [
         [
             "Referral packet",
             f"Patient: {patient.display_name}",
             f"Dataset id: {patient.dataset_patient_id}",
+            # A tier word and its reason, never a score or a probability
+            # (AC-037, AC-039).
+            f"Status: {scored['tier']}",
+            f"Why: {scored['tier_reason']}",
+            *(
+                [f"Counter-evidence: {item['label']}" for item in counter]
+                or ["Counter-evidence: none recorded."]
+            ),
+            *(
+                [f"Alternative explanation: {scored['alternative_explanation']['label']}"]
+                if scored["alternative_explanation"]
+                else []
+            ),
         ],
         _history_lines(_timeline_items(db, patient)),
     ]

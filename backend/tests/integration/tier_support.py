@@ -15,6 +15,7 @@ from __future__ import annotations
 import io
 import os
 import re
+import secrets
 import uuid
 from typing import Any
 
@@ -24,6 +25,14 @@ from tests.integration import fixtures_dataset as fx
 from tests.integration import fixtures_tiers as ft
 from tests.integration.conftest import wait_for_run
 from tests.integration.fixtures_tiers import TierDrop
+
+#: The non-admin account the wrong-role checks sign in as: the backend seeds a
+#: patient-role user from these two at startup, so naming them here -- before
+#: the application starts -- creates that account through the application's own
+#: code rather than by writing a row. No credential is written into the
+#: repository: the value is generated at run time.
+os.environ.setdefault("SMOKE_TEST_EMAIL", f"qa-tier-patient-{uuid.uuid4().hex[:8]}@example.test")
+os.environ.setdefault("SMOKE_TEST_PASSWORD", secrets.token_urlsafe(24))
 
 INGEST_START = "/api/admin/ingest-runs"
 WORKLIST = "/api/worklist"

@@ -22,141 +22,10 @@ const INVITE_LABEL = {
 };
 const INVITE_GLYPH = { not_yet_opened: "○", opened: "◐", intake_completed: "●" };
 
-const PATIENTS = [
-  {
-    id: "p-0412",
-    name: "Delphine Archambault",
-    meta: "1991 · F",
-    tier: "High",
-    reason:
-      "Night pain, alternating buttock pain and prior uveitis; HLA-B27 positive; MRI wording of sacroiliitis.",
-    span: "7 yr 3 mo",
-    decision: { kind: "Agree", by: "Dr. Imani Rao", on: "12 Nov" },
-    invite: "done",
-  },
-  {
-    id: "p-0388",
-    name: "Tomasz Wieczorek",
-    meta: "1987 · M",
-    tier: "High",
-    reason: "Four years of back-pain visits, CRP raised twice, parent with spondylitis.",
-    span: "5 yr 8 mo",
-    decision: null,
-    invite: "opened",
-  },
-  {
-    id: "p-0451",
-    name: "Marisol Quintero",
-    meta: "1993 · F",
-    tier: "High",
-    reason: "Uveitis history, plus cash-paid chiropractic care reported at intake.",
-    span: "5 yr 0 mo",
-    decision: null,
-    invite: "done",
-  },
-  {
-    id: "p-0307",
-    name: "Rosalind Achterberg",
-    meta: "1994 · F",
-    tier: "Moderate",
-    reason:
-      "Chronic back pain under a fibromyalgia label; HLA-B27 negative and CRP normal, which do not rule it out.",
-    span: "4 yr 1 mo",
-    decision: { kind: "Need more info", by: "Dr. Imani Rao", on: "10 Nov" },
-    invite: "done",
-  },
-  {
-    id: "p-0366",
-    name: "Odalys Brennan",
-    meta: "1996 · F",
-    tier: "Moderate",
-    reason:
-      "Capped below High: postpartum onset and iliac-side sclerosis fit osteitis condensans ilii.",
-    span: "6 yr 2 mo",
-    decision: { kind: "Agree", by: "Dr. Samuel Whitlock", on: "13 Nov" },
-    invite: "opened",
-  },
-  {
-    id: "p-0429",
-    name: "Callum Ferreira",
-    meta: "1999 · M",
-    tier: "Moderate",
-    reason: "Heel pain and one uveitis episode; back-pain pattern not yet documented.",
-    span: "3 yr 6 mo",
-    decision: null,
-    invite: "sent",
-  },
-  {
-    id: "p-0274",
-    name: "Bertrand Nkemelu",
-    meta: "1983 · M",
-    tier: "Insufficient history",
-    reason: "Only 10 months of records reachable after an insurer change; no symptom intake yet.",
-    span: "10 mo",
-    decision: null,
-    invite: "none",
-  },
-  {
-    id: "p-0340",
-    name: "Henrik Solvang",
-    meta: "1978 · M",
-    tier: "Insufficient history",
-    reason: "Back care was paid in cash; only 11 months of claims are reachable.",
-    span: "11 mo",
-    decision: null,
-    invite: "sent",
-  },
-  {
-    id: "p-0495",
-    name: "Priya Venkataraghavan",
-    meta: "2001 · F",
-    tier: "Insufficient history",
-    reason: "Coverage began 9 months ago; nothing earlier is connected.",
-    span: "9 mo",
-    decision: null,
-    invite: "opened",
-  },
-  {
-    id: "p-0219",
-    name: "Lucien Marchetti",
-    meta: "1997 · M",
-    tier: "Low",
-    reason: "Rower with load-related sacroiliac edema; pain worse with activity.",
-    span: "4 yr 11 mo",
-    decision: { kind: "Agree", by: "Dr. Samuel Whitlock", on: "9 Nov" },
-    invite: "done",
-  },
-  {
-    id: "p-0258",
-    name: "Gideon Aldous",
-    meta: "1990 · M",
-    tier: "Low",
-    reason: "Back pain after lifting; normal CRP, good NSAID response, no inflammatory features.",
-    span: "8 yr 4 mo",
-    decision: null,
-    invite: "none",
-  },
-  {
-    id: "p-0231",
-    name: "Imelda Oyelaran",
-    meta: "1969 · F",
-    tier: "Low",
-    reason: "Widespread pain, normal CRP and poor NSAID response; counter-evidence applied.",
-    span: "6 yr 9 mo",
-    decision: { kind: "Disagree", by: "Dr. Imani Rao", on: "11 Nov" },
-    invite: "none",
-  },
-  {
-    id: "p-0203",
-    name: "Wren Takahashi",
-    meta: "1985 · F",
-    tier: "Low",
-    reason: "A single back-pain visit in 2024; no family history, eye or joint signs on record.",
-    span: "6 yr 9 mo",
-    decision: null,
-    invite: "none",
-  },
-].sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]);
+// US-012: every tier, reason and reachable-history value comes from GET /api/worklist.
+// There is no local fallback: a row the API gives no tier for is shown as such.
+const historyLabel = (months) =>
+  typeof months === "number" ? `${months} ${months === 1 ? "month" : "months"}` : "Not known";
 
 export default function Screen() {
   const navigate = useNavigate();
@@ -173,9 +42,7 @@ export default function Screen() {
   const [loading, setLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState("");
 
-  // AC-085: patient name and invite status come from GET /api/worklist. The other
-  // columns (tier, reason, reachable history, decision) are still the approved sample
-  // copy -- the contract does not carry them yet.
+  // AC-037: every column on this screen comes from GET /api/worklist.
   const load = React.useCallback(async () => {
     try {
       const data = await apiFetch("/api/worklist");
@@ -194,12 +61,19 @@ export default function Screen() {
 
   const patients = React.useMemo(
     () =>
-      items.map((item, i) => ({
-        ...PATIENTS[i % PATIENTS.length],
-        id: item.patient_id,
-        name: item.display_name,
-        invite: item.invite_status,
-      })),
+      items
+        .map((item) => ({
+          id: item.patient_id,
+          name: item.display_name,
+          datasetId: item.dataset_patient_id,
+          tier: item.tier,
+          reason: item.tier_reason,
+          months: item.reachable_history_months,
+          belowThreshold: item.below_reachable_history_threshold,
+          counterEvidence: item.counter_evidence_count,
+          invite: item.invite_status,
+        }))
+        .sort((a, b) => (TIER_ORDER[a.tier] ?? 9) - (TIER_ORDER[b.tier] ?? 9)),
     [items],
   );
 
@@ -304,13 +178,20 @@ export default function Screen() {
           Insufficient history
         </span>
       );
-    return (
-      <span style={{ ...base, color: P, border: `1px solid ${N}`, backgroundColor: "transparent" }}>
-        <span aria-hidden="true" style={{ letterSpacing: 2 }}>
-          ◆◇◇
+    if (tier === "Low")
+      return (
+        <span
+          style={{ ...base, color: P, border: `1px solid ${N}`, backgroundColor: "transparent" }}
+        >
+          <span aria-hidden="true" style={{ letterSpacing: 2 }}>
+            ◆◇◇
+          </span>
+          Low
         </span>
-        Low
-      </span>
+      );
+    // No tier from the API: say so rather than invent one.
+    return (
+      <span style={{ ...base, color: P, border: `1px dashed ${N}` }}>No status from the API</span>
     );
   };
 
@@ -546,7 +427,7 @@ export default function Screen() {
                         Reachable history
                       </TH>
                       <TH data-wf="i-2-0-4" scope="col" style={th}>
-                        Decision
+                        Counter-evidence
                       </TH>
                       <TH data-wf="i-2-0-5" scope="col" style={th}>
                         Invite status
@@ -562,6 +443,7 @@ export default function Screen() {
                       return (
                         <TR
                           key={p.id}
+                          data-testid={`worklist-row-${p.id}`}
                           className="wl-row wl-enter"
                           onClick={() => openCase(p)}
                           style={{
@@ -594,7 +476,7 @@ export default function Screen() {
                               </span>
                             </button>
                             <div style={{ fontSize: 12, color: soft, marginTop: 4 }}>
-                              {p.meta} · {p.id.toUpperCase()}
+                              {p.datasetId}
                             </div>
                           </TD>
                           <TD style={td}>
@@ -602,23 +484,20 @@ export default function Screen() {
                           </TD>
                           <TD style={{ ...td, maxWidth: 360 }}>{p.reason}</TD>
                           <TD style={{ ...td, whiteSpace: "nowrap" }}>
-                            <span style={{ fontWeight: 600 }}>{p.span}</span>
-                            {insuff && (
+                            <span style={{ fontWeight: 600 }}>{historyLabel(p.months)}</span>
+                            {p.belowThreshold && (
                               <div style={{ fontSize: 12, color: soft, marginTop: 4 }}>
                                 Below the threshold
                               </div>
                             )}
                           </TD>
                           <TD style={td}>
-                            {p.decision ? (
-                              <>
-                                <div style={{ fontWeight: 600 }}>{p.decision.kind}</div>
-                                <div style={{ fontSize: 12, color: soft, marginTop: 4 }}>
-                                  {p.decision.by} · {p.decision.on}
-                                </div>
-                              </>
+                            {p.counterEvidence ? (
+                              <span style={{ fontWeight: 600 }}>
+                                {p.counterEvidence} {p.counterEvidence === 1 ? "item" : "items"}
+                              </span>
                             ) : (
-                              <span style={{ color: soft }}>No decision yet</span>
+                              <span style={{ color: soft }}>None</span>
                             )}
                           </TD>
                           <TD style={{ ...td, whiteSpace: "nowrap" }}>

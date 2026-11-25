@@ -136,37 +136,124 @@ criteria:
       raised_inflammatory_markers: 1
     pass_score: 4
 
+# Counter-evidence rules. Each rule names, as data: the plain-language
+# sentence a clinician reads, the effect it has on the tier and the tier that
+# effect names, whether it still awaits clinical sign-off, what triggers it
+# (coded events, intake answers, or clues the free-text extractor found in a
+# note), and -- where there is one -- the alternative explanation to name.
 counter_evidence:
   established_mechanical_cause:
     label: Documented mechanical or structural cause for the back pain
+    plain_language: A mechanical or structural cause for the back pain is already recorded, which explains the picture without an inflammatory cause.
     code_lists: [mechanical_back_pain]
     effect: demote
     demote_to: Low
+    requires_sign_off: false
   widespread_pain_syndrome:
     label: Widespread pain syndrome better explains the picture
+    plain_language: A widespread pain syndrome is recorded, which better explains pain spread across the body.
     code_lists: [fibromyalgia]
     effect: demote
     demote_to: Moderate
+    requires_sign_off: false
   specialist_excluded:
     label: A rheumatologist has already excluded the condition
+    plain_language: A specialist has already looked at this picture and excluded the condition.
     intake_keys: [rheumatology_excluded]
     effect: demote
     demote_to: Low
+    requires_sign_off: false
+  iliac_side_only_sclerosis_pattern:
+    label: Sclerosis confined to the iliac side of the joint
+    plain_language: The imaging report describes sclerosis on the iliac side of the joint only, which is not the pattern this assessment looks for.
+    clues:
+      - clue: iliac_side_only_sclerosis
+    effect: cap
+    cap_to: Moderate
+    requires_sign_off: true
+    alternative_explanation: A pattern consistent with osteitis condensans ilii.
+  erosions_absent_pattern:
+    label: No erosions reported on imaging
+    plain_language: The imaging report states that no erosions are present, which weighs against an inflammatory cause.
+    clues:
+      - clue: erosions
+        value: absent
+    effect: cap
+    cap_to: Moderate
+    requires_sign_off: true
+  postpartum_onset_timing:
+    label: Symptom onset close to a delivery or the postpartum period
+    plain_language: The symptoms are described as beginning around a delivery, inside the postpartum window this pack declares.
+    clues:
+      - clue: postpartum_timing
+    window_months: postpartum_window_months
+    effect: cap
+    cap_to: Moderate
+    requires_sign_off: true
+    alternative_explanation: A pattern consistent with osteitis condensans ilii.
+  widespread_pain_reported:
+    label: Widespread pain reported across the body
+    plain_language: The notes describe pain spread widely across the body rather than confined to the back and sacroiliac joints.
+    clues:
+      - clue: widespread_pain_wording
+    effect: cap
+    cap_to: Moderate
+    requires_sign_off: false
+  normal_crp_result:
+    label: A normal CRP result
+    plain_language: The recorded CRP result is normal, so there is no laboratory sign of inflammation.
+    clues:
+      - clue: normal_inflammatory_marker_wording
+    effect: cap
+    cap_to: Moderate
+    requires_sign_off: false
+  poor_nsaid_response:
+    label: Poor response to NSAIDs
+    plain_language: A full trial of NSAIDs gave little or no relief, which weighs against an inflammatory cause.
+    clues:
+      - clue: poor_anti_inflammatory_response_wording
+    effect: cap
+    cap_to: Moderate
+    requires_sign_off: false
+  load_related_oedema_pattern:
+    label: Load-related pattern of sacroiliac bone-marrow oedema
+    plain_language: The oedema is described in a load-related distribution, the pattern seen with repeated mechanical loading.
+    clues:
+      - clue: load_related_oedema_wording
+    effect: cap
+    cap_to: Moderate
+    requires_sign_off: true
+    alternative_explanation: A load-related mechanical pattern seen in athletes.
+  activity_worsened_pain_pattern:
+    label: Pain worse with activity and loading
+    plain_language: The pain is recorded as worse with activity and loading and easier with rest, which is a mechanical rather than an inflammatory pattern.
+    clues:
+      - clue: activity_worsened_pain_wording
+    effect: cap
+    cap_to: Moderate
+    requires_sign_off: true
 
 # How a counter-evidence rule changes the tier, declared as data rather than
-# as a branch in code: each rule above names its effect and the tier it may
-# demote to, and these entries say what each effect means.
+# as a branch in code: each rule above names its effect and the tier that
+# effect reads, and these entries say what each effect means.
 demotion_rules:
   demote:
     label: Lower the tier to the rule's demote_to value when the rule matches.
     applies_to: counter_evidence
     tier_from: demote_to
     never_raises: true
+  cap:
+    label: Cap the tier at the rule's cap_to value when the rule matches; never raise it.
+    applies_to: counter_evidence
+    tier_from: cap_to
+    never_raises: true
 
 thresholds:
   high: 0.6
   moderate: 0.3
   reachable_history_months: 24
+  # How close to a delivery an onset has to be for the timing rule to fire.
+  postpartum_window_months: 12
   min_events_for_scoring: 3
 
 workup_items:
@@ -231,6 +318,38 @@ free_text_clues:
         - [erosions are not]
       present:
         - [erosion]
+  widespread_pain_wording:
+    label: Pain described as widespread across the body
+    description: A sentence describing pain spread widely across the body rather than confined to the back.
+    match_any:
+      - [widespread pain]
+      - [pain, all four quadrants]
+  normal_inflammatory_marker_wording:
+    label: An inflammatory marker described as normal
+    description: A sentence stating that CRP or another inflammatory marker is normal.
+    match_any:
+      - [crp, normal]
+      - [inflammatory markers, normal]
+  poor_anti_inflammatory_response_wording:
+    label: Little or no relief from anti-inflammatory treatment
+    description: A sentence stating that anti-inflammatory medication gave little or no relief.
+    match_any:
+      - [anti-inflammatories, no meaningful relief]
+      - [anti-inflammatory, no relief]
+      - [nsaid, no relief]
+  load_related_oedema_wording:
+    label: Bone-marrow oedema in a load-related distribution
+    description: A sentence describing sacroiliac bone-marrow oedema in a load-related or mechanical distribution.
+    match_any:
+      - [oedema, load-related]
+      - [edema, load-related]
+      - [load-related mechanical pattern]
+  activity_worsened_pain_wording:
+    label: Pain worse with activity and loading
+    description: A sentence stating that the pain is worse with activity or loading and eases with rest.
+    match_any:
+      - [worse with activity]
+      - [worse with loading]
   postpartum_timing:
     label: Symptoms described in relation to a recent pregnancy or delivery
     description: A sentence placing the symptoms after a delivery or in the postpartum period.
