@@ -13,11 +13,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:e2e": "playwright test",
-    "test:e2e:install": "playwright install chromium"
+    "test:e2e:install": "playwright install chromium",
+    "gen:api": "cd ../backend && ${PYTHON:-.venv/bin/python} -m scripts.export_openapi ../frontend/src/api/openapi.json && cd ../frontend && openapi-typescript src/api/openapi.json --output src/api/schema.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "5.107.1",
     "framer-motion": "14.14.0",
+    "openapi-fetch": "^0.17.0",
     "qrcode.react": "4.2.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
@@ -42,6 +44,7 @@
     "eslint-plugin-react-refresh": "0.4.26",
     "globals": "15.15.0",
     "jsdom": "25.0.1",
+    "openapi-typescript": "^7.13.0",
     "prettier": "3.10.1",
     "tailwindcss": "4.3.5",
     "typescript": "5.9.3",
