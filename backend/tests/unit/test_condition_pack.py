@@ -62,9 +62,17 @@ def test_ac020_criteria_cover_both_a_set_rule_and_a_points_rule(pack_key: str) -
 
 
 def test_ac020_every_counter_evidence_rule_declares_its_demotion_effect(pack_key: str) -> None:
-    for key, rule in registry.load_pack(pack_key).counter_evidence().items():
-        assert rule["effect"] == "demote", key
-        assert rule.get("demote_to"), key
+    """Each rule names an effect the pack's `demotion_rules` section declares,
+    and the tier field that effect reads (US-012-2 adds the capping effect
+    alongside the demoting one, so neither name is spelled out here)."""
+    pack = registry.load_pack(pack_key)
+    effects = pack.section("demotion_rules") or {}
+
+    assert effects, "the pack declares no demotion rules"
+    for key, rule in pack.counter_evidence().items():
+        effect = effects.get(rule["effect"])
+        assert isinstance(effect, dict), key
+        assert rule.get(effect["tier_from"]), key
 
 
 def test_ac020_every_workup_item_carries_its_reasoning_text(pack_key: str) -> None:

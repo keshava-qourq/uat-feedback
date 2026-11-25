@@ -275,7 +275,15 @@ def check_bucket(needs_endpoint):
         **keys,
     )
     try:
-        client.head_bucket(Bucket=bucket)
+        if endpoint:
+            # MinIO or another S3-compatible store: no AWS account owns the bucket.
+            client.head_bucket(Bucket=bucket)
+        else:
+            sts = boto3.client(
+                "sts", region_name=setting("AWS_REGION") or None, config=config, **keys
+            )
+            account = sts.get_caller_identity()["Account"]
+            client.head_bucket(Bucket=bucket, ExpectedBucketOwner=account)
     except NoCredentialsError:
         return False, "no AWS credentials found"
     except ClientError as exc:

@@ -1,5 +1,4 @@
 // @ts-nocheck -- generated from the approved design under its JS runtime contract; not hand-written TypeScript.
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -11,12 +10,9 @@ import { useNavigate } from "@/lib/navigate";
 
 const { Textarea, Label } = UI;
 
-const { Check, X, ChevronRight, Clock, Download, ArrowRight, AlertCircle, CheckCircle } = Icons;
-
 const CASE = {
   name: "Maria Alvarez",
   cutoff: "2024-03-01",
-  tier: "Moderate",
   clinician: "Dr. Priya Raman",
 };
 
@@ -118,9 +114,10 @@ const soft = () => `color-mix(in srgb, ${brand.primaryColor} 74%, ${brand.backgr
 const hair = () => `color-mix(in srgb, ${brand.primaryColor} 16%, transparent)`;
 const tint = () => `color-mix(in srgb, ${brand.primaryColor} 7%, transparent)`;
 
-const Frame = ({ wf, children, className = "", style = {} }) => (
+const Frame = ({ wf, children, className = "", style = {}, ...rest }) => (
   <section
     data-wf={wf}
+    {...rest}
     className={"cs-enter " + className}
     style={{
       border: `1px solid ${brand.accentColor}`,
@@ -405,6 +402,14 @@ export default function Screen() {
     };
   }, [patientId]);
 
+  // US-012: the headline tier, its reason and the counter-evidence are the API's.
+  const tier = caseData?.tier ?? "";
+  const cutoff = caseData?.cutoff_date ?? CASE.cutoff;
+  const counterEvidence = Array.isArray(caseData?.counter_evidence)
+    ? caseData.counter_evidence
+    : [];
+  const alternative = caseData?.alternative_explanation ?? null;
+
   const asas = caseData?.criteria?.asas_referral ?? [];
   const spartan = caseData?.criteria?.spartan ?? null;
   const spartanItems = spartan?.items ?? [];
@@ -557,7 +562,7 @@ export default function Screen() {
             style={{ fontSize: 13, color: soft(), marginTop: 8, minHeight: 20 }}
           >
             {exportState === "ready"
-              ? `Packet ready: status, evidence, criteria and workup, using only records dated before ${CASE.cutoff}.`
+              ? `Packet ready: status, evidence, criteria and workup, using only records dated before ${cutoff}.`
               : ""}
           </div>
         </div>
@@ -576,6 +581,7 @@ export default function Screen() {
             Status
           </p>
           <h2
+            data-testid="case-tier"
             style={{
               fontFamily: brand.fontHeading,
               fontSize: 32,
@@ -586,11 +592,14 @@ export default function Screen() {
             }}
           >
             <span className="sr-only">Status: </span>
-            {CASE.tier}
+            {caseLoading ? "Loading…" : tier || "No status from the API"}
           </h2>
           <Ornament />
-          <p style={{ margin: "0 auto", maxWidth: 640, fontSize: 16, lineHeight: 1.5 }}>
-            Night pain, 3 back-pain visits and uveitis; negative HLA-B27 does not rule it out.
+          <p
+            data-testid="case-tier-reason"
+            style={{ margin: "0 auto", maxWidth: 640, fontSize: 16, lineHeight: 1.5 }}
+          >
+            {caseData?.tier_reason ?? ""}
           </p>
           <p style={{ margin: "12px 0 0", fontSize: 13, color: soft() }}>
             Scored as of cutoff{" "}
@@ -601,7 +610,7 @@ export default function Screen() {
                 color: brand.primaryColor,
               }}
             >
-              {CASE.cutoff}
+              {cutoff}
             </span>
             . Only records dated before this day are used.
           </p>
@@ -611,7 +620,7 @@ export default function Screen() {
             style={{ listStyle: "none", margin: "24px 0 0", padding: 0 }}
           >
             {TIERS.map((t) => {
-              const current = t === CASE.tier;
+              const current = t === tier;
               const insufficient = t === "Insufficient history";
               return (
                 <li
@@ -654,35 +663,76 @@ export default function Screen() {
         </ListBlock>
 
         {/* Row 4 */}
-        <Frame wf="b-3-0" className="md:col-span-6">
-          <H2>Counter-evidence</H2>
-          <Ornament />
-          <p style={{ margin: 0, fontSize: 15 }}>
-            Widespread pain with normal CRP caps tier at Moderate.
-          </p>
-          <p style={{ margin: "12px 0 0", fontSize: 15 }}>
-            <strong>Alternative:</strong> pattern consistent with fibromyalgia.
-          </p>
-          <p style={{ margin: "12px 0 0", fontSize: 13, color: soft() }}>
-            Triggered by: Normal CRP,{" "}
-            <span style={{ fontVariantNumeric: "tabular-nums" }}>2023-11-02</span> · Record
-          </p>
-          <p
-            className="inline-flex items-center gap-2"
-            style={{
-              margin: "16px 0 0",
-              padding: "4px 12px",
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              border: `1px dashed ${brand.primaryColor}`,
-            }}
-          >
-            <Ico name="Clock" />
-            Awaiting clinical review
-          </p>
-        </Frame>
+        {counterEvidence.length ? (
+          <Frame wf="b-3-0" className="md:col-span-6" data-testid="counter-evidence-panel">
+            <H2>Counter-evidence</H2>
+            <Ornament />
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {counterEvidence.map((item) => (
+                <li
+                  key={item.key}
+                  data-testid={`counter-evidence-${item.key}`}
+                  style={{ borderTop: `1px solid ${hair()}`, padding: "12px 0" }}
+                >
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{item.label}</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 15 }}>{item.plain_language}</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: soft() }}>
+                    Caps the status at {item.capped_to}.
+                  </p>
+                  <ul style={{ listStyle: "none", margin: "8px 0 0", padding: 0 }}>
+                    {(item.evidence ?? []).map((e, i) => (
+                      <li
+                        key={`${item.key}-${i}`}
+                        className="flex flex-wrap items-center gap-2"
+                        style={{ fontSize: 13, color: soft(), padding: "4px 0" }}
+                      >
+                        {e.source_ref ? (
+                          <a
+                            href={`/timeline?source_ref=${encodeURIComponent(e.source_ref)}`}
+                            style={{ fontWeight: 600, color: brand.primaryColor }}
+                          >
+                            {e.display}
+                          </a>
+                        ) : (
+                          <span style={{ fontWeight: 600, color: brand.primaryColor }}>
+                            {e.display}
+                          </span>
+                        )}
+                        {e.date ? (
+                          <span style={{ fontVariantNumeric: "tabular-nums" }}>{e.date}</span>
+                        ) : null}
+                        <SourceTag tag={e.source_tag} />
+                      </li>
+                    ))}
+                  </ul>
+                  {item.awaiting_sign_off ? (
+                    <p
+                      className="inline-flex items-center gap-2"
+                      data-testid={`awaiting-sign-off-${item.key}`}
+                      style={{
+                        margin: "8px 0 0",
+                        padding: "4px 12px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        border: `1px dashed ${brand.primaryColor}`,
+                      }}
+                    >
+                      <Ico name="Clock" />
+                      Awaiting clinical review
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            {alternative ? (
+              <p data-testid="alternative-explanation" style={{ margin: "12px 0 0", fontSize: 15 }}>
+                <strong>Alternative:</strong> {alternative.label}
+              </p>
+            ) : null}
+          </Frame>
+        ) : null}
         <ListBlock wf="b-3-1" title="Conflicting labels in the record" span="md:col-span-6">
           {CONFLICTING.length ? (
             CONFLICTING.map((i) => (
@@ -934,7 +984,7 @@ export default function Screen() {
                   Decision saved: {saved.label}
                 </p>
                 <p style={{ margin: "4px 0 0", color: soft() }}>
-                  {CASE.clinician} · {saved.at} · tier shown: {CASE.tier}
+                  {CASE.clinician} · {saved.at} · tier shown: {tier || "none"}
                 </p>
                 {saved.reason ? <p style={{ margin: "4px 0 0" }}>“{saved.reason}”</p> : null}
                 {saved.results.length ? (
