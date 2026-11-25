@@ -22,6 +22,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
     css: false,
+    // A JUnit XML report on every run, in the fixed folder the platform reads to fill the
+    // test case sheet. A command-line --reporter replaces these.
+    reporters: ["default", "junit"],
+    outputFile: { junit: "reports/junit/vitest.xml" },
     // Coverage is measured by the sprint's test check and reported as a
     // json-summary the platform reads back for the development dashboard.
     coverage: {

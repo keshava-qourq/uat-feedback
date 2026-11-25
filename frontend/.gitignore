@@ -8,3 +8,6 @@ test-results/
 playwright-report/
 e2e-report.json
 playwright/.cache/
+
+# JUnit reports the sprint test run writes
+reports/

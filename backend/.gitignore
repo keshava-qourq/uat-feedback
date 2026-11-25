@@ -10,3 +10,6 @@ venv/
 # unit-test run's default); never the deployed path, which MEDIA_ROOT points
 # elsewhere for.
 /media/
+
+# JUnit reports the sprint test run writes
+reports/
