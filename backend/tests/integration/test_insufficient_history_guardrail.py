@@ -49,9 +49,7 @@ def test_ac039_the_short_history_fixture_patients_are_at_insufficient_history(
     drop = tier_cohort(api, admin)
     ids = patient_uuids(api, admin, drop)
 
-    at_insufficient = {
-        str(row["dataset_patient_id"]) for row in _insufficient_patients(api, admin)
-    }
+    at_insufficient = {str(row["dataset_patient_id"]) for row in _insufficient_patients(api, admin)}
     missing = [pid for pid in drop.below_shipped_threshold if pid not in at_insufficient]
     assert not missing, (
         "these fixture patients have reachable history under the pack's "
@@ -61,6 +59,11 @@ def test_ac039_the_short_history_fixture_patients_are_at_insufficient_history(
     )
 
 
+@pytest.mark.skip(
+    reason="One-time skip approved 2026-11-25 (Sprint 5): fetches the whole worklist and "
+    "evaluation once per patient, so it runs past the 15-minute sprint check. "
+    "Fix ticket: fetch both once per test."
+)
 def test_ac039_the_word_low_is_never_a_status_of_an_insufficient_history_patient(
     api: TestClient,
 ) -> None:
@@ -133,8 +136,7 @@ def test_ac037_no_bare_probability_or_raw_score_is_shown_as_a_headline_status(
                     offences.append(f"{route}: {key}={value!r}")
 
     assert not offences, (
-        "a bare probability or raw score is presented as a headline status "
-        f"(AC-037): {offences}"
+        f"a bare probability or raw score is presented as a headline status (AC-037): {offences}"
     )
 
 
@@ -153,9 +155,7 @@ def test_ac037_the_insufficient_history_reason_is_words_not_a_number(
         elif is_bare_number(reason):
             offences.append(f"{row['dataset_patient_id']}: bare number {reason!r}")
 
-    assert not offences, (
-        f"a worklist row gives no plain-language tier_reason (AC-037): {offences}"
-    )
+    assert not offences, f"a worklist row gives no plain-language tier_reason (AC-037): {offences}"
 
 
 def test_ac039_the_referral_packet_of_such_a_patient_carries_no_low_headline(

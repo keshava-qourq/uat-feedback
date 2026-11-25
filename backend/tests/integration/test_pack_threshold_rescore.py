@@ -64,9 +64,7 @@ def test_ac040_the_report_states_the_high_and_moderate_thresholds_too(
         "GET /api/evaluation/runs/latest carries no thresholds_in_force object"
     )
     for key in ("reachable_history_months", "high", "moderate"):
-        assert key in forced, (
-            f"thresholds_in_force does not state {key!r}: {str(forced)[:300]}"
-        )
+        assert key in forced, f"thresholds_in_force does not state {key!r}: {str(forced)[:300]}"
 
 
 def test_ac040_lowering_the_threshold_changes_the_insufficient_history_set(
@@ -134,13 +132,10 @@ def test_ac040_the_case_read_states_the_threshold_it_was_judged_against(
     patient_uuid = uuid_of(api, admin, drop, drop.short)
     reachable = case_read(api, admin, patient_uuid).get("reachable_history")
     assert isinstance(reachable, dict), (
-        "the case read carries no reachable_history object, which the contract "
-        "requires"
+        "the case read carries no reachable_history object, which the contract requires"
     )
     for key in ("months", "threshold_months", "below_threshold"):
-        assert key in reachable, (
-            f"reachable_history does not state {key!r}: {str(reachable)[:300]}"
-        )
+        assert key in reachable, f"reachable_history does not state {key!r}: {str(reachable)[:300]}"
     assert reachable["threshold_months"] == _current_months(api, admin), (
         "the case read states a reachable-history threshold other than the one "
         f"the active pack declares: {str(reachable)[:300]}"

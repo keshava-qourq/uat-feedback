@@ -276,9 +276,7 @@ def counter_evidence_items(case: dict) -> list[dict]:
 
 def item_text(item: dict) -> str:
     """The words one counter-evidence item shows a clinician."""
-    return " ".join(
-        str(item.get(key) or "") for key in ("key", "label", "plain_language")
-    ).lower()
+    return " ".join(str(item.get(key) or "") for key in ("key", "label", "plain_language")).lower()
 
 
 def fired_words(items: list[dict]) -> str:
@@ -320,18 +318,14 @@ def read_pack(api: TestClient, admin: dict[str, str]) -> dict:
 
 
 def write_pack(api: TestClient, admin: dict[str, str], config: dict, summary: str) -> dict:
-    response = api.put(
-        PACK, headers=admin, json={"config": config, "change_summary": summary}
-    )
+    response = api.put(PACK, headers=admin, json={"config": config, "change_summary": summary})
     assert response.status_code in (200, 201), (
         f"PUT {PACK} returned {response.status_code}: {response.text[:300]}"
     )
     return response.json()
 
 
-def set_reachable_history_months(
-    api: TestClient, admin: dict[str, str], months: int
-) -> None:
+def set_reachable_history_months(api: TestClient, admin: dict[str, str], months: int) -> None:
     """Change thresholds.reachable_history_months through PUT /api/admin/pack."""
     body = read_pack(api, admin)
     config = dict(body["config"])
@@ -359,8 +353,7 @@ def threshold_in_force(api: TestClient, admin: dict[str, str]) -> Any:
         f"not state the threshold in force (AC-040): {str(report)[:300]}"
     )
     assert "reachable_history_months" in forced, (
-        "thresholds_in_force does not state reachable_history_months: "
-        f"{str(forced)[:300]}"
+        f"thresholds_in_force does not state reachable_history_months: {str(forced)[:300]}"
     )
     return forced["reachable_history_months"]
 

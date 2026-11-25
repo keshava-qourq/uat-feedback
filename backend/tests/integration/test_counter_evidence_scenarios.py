@@ -251,7 +251,7 @@ def test_ac036_the_source_link_of_each_triggering_evidence_item_resolves(
             for item in (timeline.json().get("items") or [])
             if isinstance(item, dict) and item.get("source_ref")
         }
-        for row in (timeline.json().get("items") or []):
+        for row in timeline.json().get("items") or []:
             for source in (row.get("sources") or []) if isinstance(row, dict) else []:
                 if isinstance(source, dict) and source.get("source_ref"):
                     known.add(str(source["source_ref"]))

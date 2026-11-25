@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import event, select
 from sqlalchemy.orm import Session
 
 from app.engine.inputs import cutoff_date, is_pre_cutoff, item_date
@@ -49,8 +49,28 @@ KIND_POINTS = "points"
 # ----------------------------------------------------------------- the pack
 
 
+_PACK_CONFIG = "pack_config"
+
+
 def pack_config(db: Session) -> dict[str, Any] | None:
-    """The active pack's configuration data, or None when no pack is active."""
+    """The active pack's configuration data, or None when no pack is active.
+
+    Read once per session until it commits or rolls back: the worklist scores every
+    patient and each score asks several times, so re-reading the stored pack each
+    time made one page take minutes. A pack edit commits, so edits still apply.
+    """
+    if _PACK_CONFIG not in db.info:
+        db.info[_PACK_CONFIG] = _load_pack_config(db)
+    return db.info[_PACK_CONFIG]
+
+
+@event.listens_for(Session, "after_commit")
+@event.listens_for(Session, "after_rollback")
+def _forget_pack_config(session: Session) -> None:
+    session.info.pop(_PACK_CONFIG, None)
+
+
+def _load_pack_config(db: Session) -> dict[str, Any] | None:
     if not pack_registry.pack_enabled():
         return None
     stored = active_pack(db)
