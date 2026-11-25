@@ -3,6 +3,15 @@
 > Maintained by QuorQ AI SDLC. Text between `sdlc:auto` markers is regenerated; anything outside them is yours and is kept.
 
 <!-- sdlc:auto:start releases -->
+## 50aeffc25492 — 2026-11-25
+
+**Commit:** `50aeffc`
+
+**Delivered:**
+- US-011: Cap the tier with counter-evidence and name the alternative
+- US-012: Output a tier, never a bare score, with an explicit Insufficient history state
+- US-045: Remove the sign-in form from the /start entry screen
+
 ## 5f7e38c9ddea — 2026-11-23
 
 **Commit:** `5f7e38c`
