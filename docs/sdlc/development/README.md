@@ -3,39 +3,41 @@
 > Maintained by QuorQ AI SDLC. Text between `sdlc:auto` markers is regenerated; anything outside them is yours and is kept.
 
 <!-- sdlc:auto:start narrative -->
-### DEV-US-010 · approved · source: dev:US-010
+### DEV-US-011 · approved · source: dev:US-011
 
-Ticket US-010 implements evaluation of ASAS referral criteria and SPARTAN points. The work is reported as delivered in a completed development run. It landed in commit 5603fbea4c30db957867f9c02ecd74da05096fcd.
+Ticket US-011, "Cap the tier with counter-evidence and name the alternative", was delivered. It changes how the assessment tier responds when counter-evidence is present, capping the tier and naming an alternative explanation. Delivered in commit 59b86476b5dd220898591dc33f8007d6081841a2.
 
-- Scope: Evaluate ASAS referral criteria and SPARTAN points.
-- Status: delivered (development run status: completed).
-- Commit: 5603fbea4c30db957867f9c02ecd74da05096fcd (shared with US-015 and US-034).
-- Traces to requirement US-010.
-- Not stated in the input: implementation approach, author/reviewer, dates, test coverage, or verification results.
+- Ticket: US-011 — Cap the tier with counter-evidence and name the alternative
+- Status: delivered
+- Commit: 59b86476b5dd220898591dc33f8007d6081841a2 (shared with US-012 and US-045)
+- Scope per ticket title: when counter-evidence exists, the resulting tier is capped, and the alternative explanation is stated explicitly.
+- Closely coupled to US-012 (tiered output rather than a bare score); both shipped in the same commit.
+- Not stated in the input: implementation detail, author, review/approval, delivery date, or test outcome.
 
-**Related:** US-010
+**Related:** US-011, US-012
 
-### DEV-US-015 · approved · source: dev:US-015
+### DEV-US-012 · approved · source: dev:US-012
 
-Ticket US-015 implements extraction of buried clues from clinical notes and imaging reports, each returned with a quoted source. The work is reported as delivered in a completed development run. It landed in commit 5603fbea4c30db957867f9c02ecd74da05096fcd.
+Ticket US-012, "Output a tier, never a bare score, with an explicit Insufficient history state", was delivered. The output surface returns a tier rather than a raw numeric score and includes a distinct Insufficient history state. Delivered in commit 59b86476b5dd220898591dc33f8007d6081841a2.
 
-- Scope: Extract buried clues from notes and imaging reports, with a quoted source accompanying each extracted clue.
-- Status: delivered (development run status: completed).
-- Commit: 5603fbea4c30db957867f9c02ecd74da05096fcd (shared with US-010 and US-034).
-- Traces to requirement US-015.
-- Not stated in the input: extraction method, source documents covered, author/reviewer, dates, or verification results.
+- Ticket: US-012 — Output a tier, never a bare score, with an explicit Insufficient history state
+- Status: delivered
+- Commit: 59b86476b5dd220898591dc33f8007d6081841a2 (shared with US-011 and US-045)
+- Scope per ticket title: results are expressed as a tier; a bare score is never emitted; an explicit "Insufficient history" state is available as a distinct outcome.
+- Coupled to US-011, which caps that tier in the presence of counter-evidence.
+- Not stated in the input: tier names/thresholds, implementation detail, author, review/approval, delivery date, or test outcome.
 
-**Related:** US-015
+**Related:** US-012, US-011
 
-### DEV-US-034 · approved · source: dev:US-034
+### DEV-US-045 · approved · source: dev:US-045
 
-Ticket US-034 blocks post-cutoff data from both scoring and display. The work is reported as delivered in a completed development run. It landed in commit 5603fbea4c30db957867f9c02ecd74da05096fcd.
+Ticket US-045, "Remove the sign-in form from the /start entry screen", was delivered. The /start entry screen no longer presents a sign-in form. Delivered in commit 59b86476b5dd220898591dc33f8007d6081841a2.
 
-- Scope: Prevent data dated after the defined cutoff from being used in scoring and from being shown in the UI.
-- Status: delivered (development run status: completed).
-- Commit: 5603fbea4c30db957867f9c02ecd74da05096fcd (shared with US-010 and US-015).
-- Traces to requirement US-034.
-- Not stated in the input: how the cutoff is defined or configured, enforcement points, author/reviewer, dates, or verification results.
+- Ticket: US-045 — Remove the sign-in form from the /start entry screen
+- Status: delivered
+- Commit: 59b86476b5dd220898591dc33f8007d6081841a2 (shared with US-011 and US-012)
+- Scope per ticket title: the sign-in form is removed from the /start entry screen.
+- Not stated in the input: what (if anything) replaces the form, any downstream auth impact, author, review/approval, delivery date, or test outcome.
 
-**Related:** US-034
+**Related:** US-045
 <!-- sdlc:auto:end narrative -->
