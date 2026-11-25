@@ -34,7 +34,7 @@ from app.extraction_report import note_link
 from app.models import Event, IntakeAnswer, NoteFinding
 from app.provenance import resolve_source_ref
 
-__all__ = ["RULE_SECTION", "apply_cap", "counter_evidence", "tier_rank"]
+__all__ = ["apply_cap", "counter_evidence", "tier_rank"]
 
 #: The pack sections this reads.
 RULE_SECTION = "counter_evidence"
@@ -126,7 +126,7 @@ def _event_evidence(patient_id: str, row: Event) -> dict[str, Any]:
     }
 
 
-def _answer_evidence(patient_id: str, row: IntakeAnswer) -> dict[str, Any]:
+def _answer_evidence(row: IntakeAnswer) -> dict[str, Any]:
     when = item_date(row.answered_at)
     return {
         "display": f"{row.question_key}: {row.answer_value}",
@@ -195,7 +195,7 @@ def _triggered(
     intake_keys = {str(key).strip().lower() for key in rule.get("intake_keys") or []}
     for answer in answers:
         if str(answer.question_key or "").strip().lower() in intake_keys:
-            evidence.append(_answer_evidence(patient_id, answer))
+            evidence.append(_answer_evidence(answer))
 
     for wanted in rule.get("clues") or []:
         wanted = wanted if isinstance(wanted, dict) else {"clue": wanted}
@@ -225,7 +225,7 @@ def _target_tier(rule: dict[str, Any], config: dict[str, Any]) -> str | None:
 
 def counter_evidence(db: Session, patient_id: str) -> dict[str, Any]:
     """Every counter-evidence rule this patient's pre-cutoff record fires."""
-    config = pack_config(db)
+    config = pack_config(db) or {}
     rules = _mapping(config, RULE_SECTION)
     if not rules:
         return {"items": [], "cap": None, "alternative_explanation": None}
@@ -237,10 +237,10 @@ def counter_evidence(db: Session, patient_id: str) -> dict[str, Any]:
 
     for key, raw in rules.items():
         rule = raw if isinstance(raw, dict) else {}
-        evidence = _triggered(rule, config or {}, patient_id, events, answers, findings)
+        evidence = _triggered(rule, config, patient_id, events, answers, findings)
         if not evidence:
             continue
-        target = _target_tier(rule, config or {})
+        target = _target_tier(rule, config)
         items.append(
             {
                 "key": key,

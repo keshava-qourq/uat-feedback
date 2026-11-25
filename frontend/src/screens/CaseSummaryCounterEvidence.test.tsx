@@ -173,6 +173,16 @@ describe("CaseSummary counter-evidence panel", () => {
     expect(screen.queryByTestId("awaiting-sign-off-load_related")).not.toBeInTheDocument();
   });
 
+  it("[AC-001] the icon-bearing controls still render after the unused icon imports were removed", async () => {
+    stub(body());
+    renderScreen();
+
+    const marker = await screen.findByTestId("awaiting-sign-off-widespread_pain");
+    expect(marker.querySelector("svg")).toBeInTheDocument();
+    const exportButton = screen.getByRole("button", { name: /export referral packet/i });
+    expect(exportButton.querySelector("svg")).toBeInTheDocument();
+  });
+
   it("[AC-036] the panel is omitted when the counter-evidence list is empty", async () => {
     stub(body({ counter_evidence: [], alternative_explanation: null }));
     renderScreen();

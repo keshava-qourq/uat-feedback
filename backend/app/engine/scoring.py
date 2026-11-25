@@ -186,7 +186,7 @@ def _tier_reason(
 
 
 def score_patient(db: Session, patient_id: str) -> dict[str, Any]:
-    """One patient's tier, the history behind it and the criteria it rests on.
+    """One patient's tier and the history and counter-evidence behind it.
 
     The headline is always a tier word from `app.engine.tiers`; no score or
     probability is returned (AC-037).
@@ -204,18 +204,11 @@ def score_patient(db: Session, patient_id: str) -> dict[str, Any]:
         # the tier; it never overrides the Insufficient-history gate.
         tier = apply_cap(_band(evaluation, config), counter["cap"])
 
-    thresholds = _thresholds(config)
     return {
         "patient_id": patient_id,
         "tier": tier,
         "tier_reason": _tier_reason(tier, history, counter, config is not None),
         "counter_evidence": counter["items"],
         "alternative_explanation": counter["alternative_explanation"],
-        "cutoff_date": evaluation.get("cutoff_date"),
         "reachable_history": history,
-        "criteria": evaluation.get("criteria", {}),
-        "thresholds_in_force": {
-            REACHABLE_HISTORY_MONTHS: history["threshold_months"],
-            **{tier_name.lower(): thresholds.get(tier_name.lower()) for tier_name in BANDS},
-        },
     }

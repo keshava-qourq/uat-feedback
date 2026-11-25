@@ -1,5 +1,4 @@
 // @ts-nocheck -- generated from the approved design under its JS runtime contract; not hand-written TypeScript.
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -10,8 +9,6 @@ import { brand } from "@/lib/brand";
 import { useNavigate } from "@/lib/navigate";
 
 const { Textarea, Label } = UI;
-
-const { Check, X, ChevronRight, Clock, Download, ArrowRight, AlertCircle, CheckCircle } = Icons;
 
 const CASE = {
   name: "Maria Alvarez",

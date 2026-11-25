@@ -254,7 +254,6 @@ thresholds:
   reachable_history_months: 24
   # How close to a delivery an onset has to be for the timing rule to fire.
   postpartum_window_months: 12
-  min_events_for_scoring: 3
 
 workup_items:
   hla_b27_test:
